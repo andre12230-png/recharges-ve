@@ -1,0 +1,25 @@
+# Bibliotheques necessaires a Recharges VE.
+# Installation :  pip install -r requirements.txt
+#
+# Les versions indiquees sont celles installees sur le PC d'origine
+# (Python 3.14.5, Windows 11). Le « >= » laisse la porte ouverte aux mises a
+# jour : verifie le 31/07/2026 dans un environnement neuf, l'application
+# fonctionne aussi avec les versions les plus recentes (reportlab 5.0.0,
+# matplotlib 3.11.1) — les pages et les deux exports passaient l'autotest.
+# (L'interface etait alors en customtkinter ; PySide6 depuis la 2.0.0.)
+#
+# Si un jour une mise a jour casse quelque chose, remplacez le >= par == pour
+# revenir aux versions ci-dessous, qui sont connues comme bonnes.
+
+PySide6>=6.11.1           # l'interface (depuis la 2.0.0), comme Pecule et le Photovoltaique
+pillow>=12.2.0            # dessin de l'icone (generer_icone.py), et matplotlib
+matplotlib>=3.10.9        # graphique energie & cout par mois (page Statistiques)
+openpyxl>=3.1.5           # export Excel (.xlsx)
+reportlab>=4.5.1          # export PDF
+
+# Les outils qui servent a CONSTRUIRE et VERIFIER (pyinstaller, ruff) sont
+# dans requirements-dev.txt : ils n'ont rien a faire ici, l'application n'en
+# a pas besoin pour fonctionner.
+#
+# Et pour reconstruire l'exe a l'identique, avec les versions exactes du jour :
+# requirements.lock

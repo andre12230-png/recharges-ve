@@ -1,0 +1,22 @@
+# Configuration de ruff, le verificateur de code.
+#
+#   py -m ruff check .         signale les problemes
+#   py -m ruff check . --fix   corrige ceux qui peuvent l'etre sans risque
+#
+# Les regles retenues sont celles activees par defaut : erreurs de syntaxe,
+# imports et variables jamais utilises, quelques pieges classiques. C'est le
+# filet le plus utile pour le moins de bruit — apres un deplacement de code,
+# ce sont les imports oublies qu'on veut voir.
+#
+# Volontairement PAS de mise en forme automatique (ruff format) : le style du
+# projet est deja homogene, et un reformatage massif rendrait illisible
+# l'historique git de tous les fichiers d'un coup.
+
+line-length = 88
+target-version = "py314"
+
+[lint.per-file-ignores]
+# Les tests posent la variable RECHARGES_DATA_DIR AVANT d'importer le module
+# teste, pour rediriger les donnees vers un dossier temporaire. L'import ne
+# peut donc pas figurer en tete du fichier : c'est voulu, pas un oubli.
+"tests/*.py" = ["E402"]

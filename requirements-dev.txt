@@ -1,0 +1,24 @@
+# Outils de developpement : ils ne servent PAS a faire tourner
+# l'application, seulement a la construire et a la verifier. Rien de tout
+# cela n'entre dans Recharges-VE.exe.
+#
+#   py -m pip install -r requirements-dev.txt
+#
+# Un seul interpreteur pour tout : « py » lance l'application depuis les
+# sources, execute les tests, ET construit l'exe (voir build.bat). L'exe
+# embarque donc exactement les bibliotheques que l'autotest a verifiees.
+# Il existe aussi un « python » sur ce PC, avec d'autres versions : ne pas
+# s'en servir pour ce projet.
+
+# lance la suite de tests (dossier tests/, avec tests/conftest.py)
+#   py -m pytest
+pytest>=8
+
+# fabrique Recharges-VE.exe (voir build.bat)
+pyinstaller>=6.22.2
+
+# verificateur de code : imports inutiles, variables jamais lues, pieges
+# classiques. Configuration dans ruff.toml.
+#   py -m ruff check .
+#   py -m ruff check . --fix
+ruff>=0.15.16

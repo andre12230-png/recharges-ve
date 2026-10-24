@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recharges VE — suivi du coût de recharge de voiture électrique</title>
+<meta name="description" content="Suivez les coûts de recharge de votre voiture électrique à domicile et sur bornes publiques. Logiciel gratuit pour Windows, en français, avec données locales.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Recharges VE">
+<meta property="og:url" content="https://andre12230-png.github.io/recharges-ve/">
+<meta property="og:title" content="Recharges VE — suivi du coût de recharge de voiture électrique">
+<meta property="og:description" content="Suivez les coûts de recharge de votre voiture électrique à domicile et sur bornes publiques. Logiciel gratuit pour Windows, en français, avec données locales.">
+<meta property="og:image" content="https://andre12230-png.github.io/recharges-ve/media/capture_1_tableau_de_bord.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Recharges VE — suivi du coût de recharge de voiture électrique">
+<meta name="twitter:description" content="Suivez les coûts de recharge de votre voiture électrique à domicile et sur bornes publiques. Logiciel gratuit pour Windows, en français, avec données locales.">
+<meta name="twitter:image" content="https://andre12230-png.github.io/recharges-ve/media/capture_1_tableau_de_bord.png">
+<link rel="canonical" href="https://andre12230-png.github.io/recharges-ve/">
+
+<!-- Données structurées Schema.org. softwareVersion suit chaque publication. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Recharges VE",
+  "url": "https://andre12230-png.github.io/recharges-ve/",
+  "sameAs": ["https://github.com/andre12230-png/recharges-ve"],
+  "description": "Logiciel gratuit pour Windows, en français, pour suivre le coût des recharges d'une voiture électrique : à domicile, réparti entre heures pleines et heures creuses d'après la grille tarifaire, et sur les bornes publiques ; prix moyen du kWh, coût électrique aux 100 km, part d'énergie non enregistrée. Données stockées localement, sans compte ni cloud.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "softwareVersion": "2.2.22",
+  "inLanguage": "fr-FR",
+  "isAccessibleForFree": true,
+  "license": "https://opensource.org/licenses/MIT",
+  "downloadUrl": "https://github.com/andre12230-png/recharges-ve/releases/latest/download/Recharges-VE-Setup.exe",
+  "installUrl": "https://github.com/andre12230-png/recharges-ve/releases/latest/download/Recharges-VE-Setup.exe",
+  "softwareRequirements": "Windows 10/11 64 bits.",
+  "author": {"@type": "Person", "name": "andre12230-png", "url": "https://github.com/andre12230-png"},
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock"},
+  "screenshot": [
+    "https://andre12230-png.github.io/recharges-ve/media/capture_1_tableau_de_bord.png",
+    "https://andre12230-png.github.io/recharges-ve/media/capture_2_historique.png",
+    "https://andre12230-png.github.io/recharges-ve/media/capture_3_statistiques.png",
+    "https://andre12230-png.github.io/recharges-ve/media/capture_4_kilometrage.png",
+    "https://andre12230-png.github.io/recharges-ve/media/capture_5_essence.png"
+  ],
+  "featureList": [
+    "Coût réel des recharges à la maison, heures pleines et heures creuses",
+    "Recharges sur bornes publiques : montant payé, prix du kWh, opérateur",
+    "Import de l'historique exporté par la borne domestique (CSV), quelle que soit sa marque",
+    "Grille tarifaire par périodes, changements de prix sans rien réécrire",
+    "Coût aux 100 km et part d'énergie non enregistrée",
+    "Comparaison avec une voiture essence, au total ou année par année",
+    "Frais des cartes de recharge : achat ou abonnement",
+    "Statistiques mois par mois, export Excel et PDF",
+    "Sauvegardes automatiques et sauvegarde sur clé USB",
+    "Thème clair ou sombre, au choix",
+    "Données 100 % locales, sans compte ni cloud"
+  ]
+}
+</script>
+<style>
+  :root{
+    --fonce:#1e3a8a; --accent:#1d4ed8; --clair:#2563eb; --vert:#15803d; --fond:#f5f8fc;
+    --txt:#222; --gris:#4b5563; --carte:#ffffff; --bord:#d6e0ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+       color:var(--txt);background:var(--fond);line-height:1.6}
+  a{color:var(--accent)}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+
+  header{background:linear-gradient(135deg,var(--fonce),var(--clair));color:#fff;
+         padding:54px 0 46px;text-align:center}
+  header h1{margin:0;font-size:2.4rem;letter-spacing:.5px}
+  header .sub{font-size:1.15rem;opacity:.97;margin:10px auto 0;max-width:640px}
+  .badges{margin:18px 0 26px}
+  .badges img{height:20px;margin:0 3px;vertical-align:middle}
+
+  .btn{display:inline-block;background:#fff;color:var(--fonce);font-weight:700;
+       font-size:1.15rem;padding:14px 28px;border-radius:10px;text-decoration:none;
+       box-shadow:0 4px 14px rgba(0,0,0,.18);transition:transform .1s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn small{display:block;font-weight:400;font-size:.8rem;color:var(--gris);margin-top:2px}
+  .src{display:inline-block;margin-top:14px;color:#e6eeff;font-size:.95rem}
+
+  .chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px 0}
+  .chip{background:var(--carte);border:1px solid var(--bord);border-radius:30px;
+        padding:8px 16px;font-size:.95rem;font-weight:600}
+
+  section{padding:8px 0 10px}
+  h2{color:var(--fonce);border-bottom:2px solid var(--bord);padding-bottom:6px;margin-top:36px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:18px}
+  .card{background:var(--carte);border:1px solid var(--bord);border-radius:12px;padding:16px 18px}
+  .card h3{margin:0 0 6px;color:var(--accent);font-size:1.05rem}
+  .card p{margin:0;color:var(--gris);font-size:.95rem}
+
+  ol.steps{padding-left:22px}
+  ol.steps li{margin-bottom:8px}
+  code{background:#e8eef8;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace}
+  .warn{background:#fff8e6;border-left:4px solid #e8c77b;padding:12px 16px;border-radius:6px;margin:14px 0}
+  .capture{display:block;width:100%;max-width:100%;height:auto;margin:14px 0;
+           border:1px solid var(--bord);border-radius:8px;background:#fff}
+  .apercu img{width:100%;border:1px solid var(--bord);border-radius:8px}
+
+  footer{text-align:center;color:var(--gris);font-size:.9rem;padding:30px 0 40px;margin-top:30px;
+         border-top:1px solid var(--bord)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>🚗 Recharges VE</h1>
+    <p class="sub">Suivez vos recharges à domicile et sur les bornes publiques, leur coût et
+    votre coût électrique aux 100 km, avec un logiciel gratuit pour Windows.</p>
+    <div class="badges">
+      <img src="https://badgen.net/github/assets-dl/andre12230-png/recharges-ve?label=t%C3%A9l%C3%A9chargements&amp;color=green" alt="Téléchargements">
+      <img src="https://badgen.net/github/release/andre12230-png/recharges-ve/stable?label=version&amp;color=blue" alt="Version">
+      <img src="https://badgen.net/github/license/andre12230-png/recharges-ve" alt="Licence MIT">
+    </div>
+    <div>
+      <a class="btn" href="https://github.com/andre12230-png/recharges-ve/releases/latest/download/Recharges-VE-Setup.exe">
+        ⬇ Télécharger pour Windows
+        <small>installeur Recharges-VE-Setup.exe — Windows 10/11 (64 bits)</small>
+      </a>
+    </div>
+    <a class="src" href="https://github.com/andre12230-png/recharges-ve/releases/latest">Version portable (.zip) et nouveautés →</a><br>
+    <a class="src" href="https://github.com/andre12230-png/recharges-ve">Voir le code source sur GitHub →</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="chips">
+    <span class="chip">💶 100 % gratuit</span>
+    <span class="chip">🇫🇷 En français</span>
+    <span class="chip">🖥️ Windows 10/11 (64 bits)</span>
+    <span class="chip">🔒 Données 100 % locales</span>
+    <span class="chip">📖 Open source (MIT)</span>
+  </div>
+
+  <section class="apercu">
+    <h2>Aperçu</h2>
+    <img src="media/capture_1_tableau_de_bord.png"
+         alt="Tableau de bord — nombre de recharges, énergie, coût, prix moyen du kWh, maison et extérieur, dernières recharges"
+         style="box-shadow:0 6px 18px rgba(0,0,0,.10);border-radius:10px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
+      <img src="media/capture_2_historique.png" alt="Historique — toutes les recharges, avec recherche, tri et filtres par lieu et par période">
+      <img src="media/capture_3_statistiques.png" alt="Statistiques — énergie et coût mois par mois, répartition par tarif et par opérateur">
+      <img src="media/capture_4_kilometrage.png" alt="Kilométrage — distance parcourue, consommation et coût réel aux 100 km">
+      <img src="media/capture_5_essence.png" alt="Essence ou électrique ? — ce que les mêmes kilomètres auraient coûté en essence, et l'économie, année par année">
+    </div>
+    <p style="text-align:center;color:var(--gris);font-size:.85rem;margin-top:8px">Captures avec des données d'exemple.</p>
+  </section>
+
+  <section>
+    <h2>À quoi ça sert ?</h2>
+    <p>Recharger une voiture électrique à la maison coûte plus ou moins cher selon l'heure,
+    et sur une borne publique le prix du kWh change d'un opérateur à l'autre. Recharges VE
+    calcule le coût réel de chaque recharge d'après <b>votre</b> contrat d'électricité et ce que
+    vous avez payé dehors, puis en tire le prix moyen du kWh et le coût aux 100 km — sans
+    abonnement, sans compte en ligne, et sans qu'aucune donnée ne quitte votre ordinateur.</p>
+    <div class="grid">
+      <div class="card"><h3>🏠 À la maison</h3><p>Le coût de chaque charge, réparti entre heures pleines et heures creuses d'après vos plages horaires, même quand elle passe minuit ou un changement de tarif.</p></div>
+      <div class="card"><h3>⚡ Sur les bornes</h3><p>Le montant payé, l'énergie, et le prix du kWh qui en découle, avec l'opérateur et la carte utilisée.</p></div>
+      <div class="card"><h3>📥 Import de la borne</h3><p>Si votre borne domestique exporte l'historique de ses charges, un fichier CSV les fait entrer d'un coup, heures exactes comprises. Quelle que soit la marque : indiquez une fois quelle colonne contient quoi.</p></div>
+      <div class="card"><h3>💶 Vos tarifs</h3><p>Une période par grille de prix : quand vos prix changent, les recharges passées gardent le leur. L'abonnement est affiché à part.</p></div>
+      <div class="card"><h3>⛽ Essence ou électrique ?</h3><p>Ce que vos kilomètres vous auraient coûté avec une voiture essence, au total ou année par année, au prix du litre que vous indiquez.</p></div>
+      <div class="card"><h3>💳 Cartes de recharge</h3><p>L'achat d'une carte ou son abonnement, mensuel ou annuel, compté à part comme l'abonnement de la maison.</p></div>
+      <div class="card"><h3>🚗 Coût aux 100 km</h3><p>À partir de vos relevés du compteur, et la part d'énergie venue d'ailleurs (bornes gratuites, recharges chez des proches).</p></div>
+      <div class="card"><h3>📊 Statistiques et exports</h3><p>L'énergie et le coût mois par mois, par tarif et par opérateur ; export Excel détaillé ou rapport PDF imprimable.</p></div>
+      <div class="card"><h3>💾 Sauvegardes</h3><p>Une copie avant chaque écriture, une restauration en deux clics, et une copie vérifiée sur clé USB quand vous le voulez.</p></div>
+      <div class="card"><h3>🌙 Clair ou sombre</h3><p>Un thème clair par défaut, et un thème sombre au choix dans les Paramètres, pour ceux que l'écran blanc fatigue le soir.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Installation</h2>
+    <ol class="steps">
+      <li><a href="https://github.com/andre12230-png/recharges-ve/releases/latest/download/Recharges-VE-Setup.exe">Téléchargez l'installeur <code>Recharges-VE-Setup.exe</code></a>.</li>
+      <li><b>Double-cliquez dessus</b> et suivez l'assistant — aucun mot de passe administrateur n'est demandé.</li>
+      <li>Lancez <b>Recharges VE</b> depuis le <b>menu Démarrer</b>.</li>
+    </ol>
+    <p>Vous préférez une version <b>portable</b>, sans installation ? Prenez plutôt le fichier
+    <a href="https://github.com/andre12230-png/recharges-ve/releases/latest"><code>.zip</code></a>
+    (rubrique « Assets » de la page) : décompressez-le où vous voulez (gardez tout le dossier
+    ensemble), puis double-cliquez sur <code>Recharges-VE\Recharges-VE.exe</code>. Vos données
+    vont, là aussi, dans votre dossier personnel.</p>
+    <p>Aucune installation de Python n'est nécessaire. <b>Configuration requise :</b> Windows 10 ou 11 (64 bits).</p>
+    <p><b>Pour mettre à jour</b>, fermez l'application et lancez simplement le nouvel installeur :
+    il remplace le programme sans toucher à vos données, rangées à part.</p>
+    <div class="warn">
+      <p style="margin-top:0">⚠️ <b>Au premier lancement, Windows affiche un avertissement.</b>
+      C'est normal, et voici comment le passer :</p>
+      <img src="media/smartscreen.png" class="capture"
+           alt="Étape 1 : cliquer sur « Informations complémentaires » dans la fenêtre « Windows a protégé votre ordinateur ». Étape 2 : cliquer sur le bouton « Exécuter quand même ».">
+      <p>Ce message ne veut pas dire que le logiciel est dangereux. Il apparaît
+      parce que Windows ne connaît pas encore ce fichier : il ne fait confiance qu'aux programmes déjà
+      téléchargés par beaucoup de monde, et chaque nouvelle version repart de zéro. L'application n'est
+      pas non plus <b>signée numériquement</b> ; une signature afficherait le nom de l'auteur, mais
+      l'avertissement resterait. Windows prévient donc qu'il ne connaît pas le fichier — pas que le
+      fichier pose problème. Le code source est
+      entièrement <a href="https://github.com/andre12230-png/recharges-ve">consultable sur GitHub</a>.</p>
+      <p><b>Et si vous préférez vérifier plutôt que me croire sur parole :</b> cet installeur a été
+      soumis à une soixantaine d'antivirus, et <a href="https://www.virustotal.com/gui/file/3cf941eaf99319d3e650b5274288d1ca3994a3a7cef7b30cb960dd7cccdfafed">aucun d'eux ne le signale</a> —
+      le rapport est public, sur VirusTotal.</p>
+      <p style="margin-bottom:0">Vous pouvez aussi <a href="https://www.virustotal.com/gui/home/upload">y
+      déposer vous-même</a> le fichier que vous venez de télécharger, pour vous assurer qu'il est bien
+      arrivé intact. Le site est en anglais, mais il n'y a rien à lire : cliquez sur <i>Choose file</i>
+      et désignez le fichier, le résultat s'affiche en quelques secondes. C'est le réflexe à avoir pour
+      n'importe quel programme téléchargé, pas seulement celui-ci.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Premiers pas</h2>
+    <ol class="steps">
+      <li><b>Saisissez vos tarifs</b> : la page <b>Tarifs</b> s'ouvre au premier lancement. Le prix du kWh
+      de votre contrat d'électricité, et vos plages d'heures creuses si vous en avez — tout se lit sur
+      votre facture.</li>
+      <li><b>Enregistrez vos recharges</b> : à la maison (début, fin, énergie) ou sur une borne (montant
+      payé, énergie). Ou importez le fichier exporté par votre borne domestique.</li>
+      <li><b>Relevez votre kilométrage</b> de temps en temps : le coût aux 100 km s'affiche. La
+      <b>Notice</b>, dans l'application, explique chaque écran.</li>
+    </ol>
+  </section>
+
+  <section id="cout-recharge-electrique">
+    <h2>Comment suivre le coût d'une recharge électrique ?</h2>
+    <h3>À domicile : l'énergie, les horaires et votre tarif</h3>
+    <p>Renseignez l'énergie chargée, le début et la fin de la recharge, ainsi que les prix
+    de votre contrat d'électricité. Si vous avez des heures creuses, indiquez leurs
+    plages horaires : Recharges VE répartit la recharge entre les périodes tarifaires.
+    Vous pouvez aussi importer l'historique exporté par votre borne domestique.</p>
+    <h3>Sur une borne publique : le montant réellement payé</h3>
+    <p>Enregistrez le montant payé et l'énergie reçue pour retrouver le prix moyen du kWh.
+    L'application suit vos recharges et leurs coûts ; elle ne recherche pas les bornes
+    disponibles et ne fournit pas leurs tarifs en direct.</p>
+    <h3>Que mesure le coût électrique aux 100 km ?</h3>
+    <p>Vos relevés de kilométrage permettent de rapprocher les dépenses de recharge des
+    kilomètres parcourus. Les abonnements et les frais de cartes sont présentés à part.
+    Ce suivi porte sur l'électricité : il ne calcule pas le coût total de possession
+    du véhicule, qui comprend aussi son achat, son assurance et son entretien.</p>
+  </section>
+
+  <section id="avis">
+    <h2>Un problème ? Une idée ?</h2>
+    <p>Installation qui bloque, calcul qui surprend, fonction qui manque : dites-le
+    dans le <a href="https://forms.cloud.microsoft/r/3EvSX9YEBP"><b>questionnaire en ligne</b></a>.
+    Il prend deux minutes, ne demande aucun compte, et aucune réponse n'y est obligatoire.
+    <b>N'y indiquez ni adresse ni numéro de carte de recharge.</b></p>
+    <p>Vous avez un compte GitHub ? Vous pouvez aussi
+    <a href="https://github.com/andre12230-png/recharges-ve/issues">ouvrir un ticket</a>.</p>
+  </section>
+
+  <section>
+    <h2>Confidentialité</h2>
+    <p>Toutes vos données restent <b>sur votre ordinateur</b>, dans votre dossier personnel
+    (<code>%LOCALAPPDATA%\Recharges VE</code>, accessible par le raccourci <b>Dossier des données</b>
+    du menu Démarrer) : vos recharges, vos tarifs et leurs sauvegardes. <b>Rien n'est envoyé en
+    ligne :</b> l'application ne crée aucun compte et ne se connecte ni à votre fournisseur, ni à
+    votre borne — c'est vous qui lui donnez les chiffres. Les boutons « Votre avis » et « Mise à
+    jour » se contentent d'ouvrir une page dans votre navigateur.</p>
+    <p>Une désinstallation laisse vos données en place ; pour tout effacer, supprimez ce dossier.</p>
+  </section>
+
+</div>
+
+<footer>
+  Recharges VE — logiciel libre sous licence MIT ·
+  <a href="https://github.com/andre12230-png/recharges-ve">Code source</a> ·
+  <a href="https://github.com/andre12230-png/recharges-ve/releases/latest">Téléchargements</a> ·
+  <a href="https://forms.cloud.microsoft/r/3EvSX9YEBP">Votre avis</a>
+</footer>
+
+<!-- Analyse de fréquentation respectueuse de la vie privée (sans cookie,
+     GoatCounter). Même compteur que Pécule et Gestion Photovoltaïque, par
+     choix de l'auteur : les visites de cette page y apparaissent sous leur
+     propre chemin (/recharges-ve/), séparées des autres. -->
+<script data-goatcounter="https://pecule.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
+</body>
+</html>
