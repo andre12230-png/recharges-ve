@@ -216,7 +216,10 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "dates de validité, l'abonnement mensuel et les prix du kWh. Quand "
          "vos prix changent, n'écrasez pas l'ancienne période : ajoutez-en "
          "une nouvelle. Les recharges déjà saisies gardent ainsi le prix qui "
-         "était le leur."),
+         "était le leur. Si deux périodes se chevauchent, c'est la plus "
+         "récente (celle qui commence le plus tard) qui s'applique pendant "
+         "le chevauchement ; la page Tarifs vous le signale à "
+         "l'enregistrement."),
         ("Recalculer les coûts",
          "Après un changement de grille, l'application propose de recalculer "
          "le coût des recharges maison ; le bouton « Recalculer tous les "
@@ -369,13 +372,17 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "sur les mêmes données effaceraient l'une les saisies de l'autre."),
         ("Sauvegardes automatiques",
          "Une copie est faite avant chaque écriture, dans le sous-dossier "
-         "backups. La page « ♻ Restaurer une sauvegarde » permet de revenir à l'une d'elles ; "
+         "backups : les 15 plus récentes y restent, plus une par jour "
+         "pendant un mois ; les plus anciennes partent à la Corbeille de "
+         "Windows. La page « ♻ Restaurer une sauvegarde » permet de revenir à l'une d'elles ; "
          "l'état actuel est mis de côté au passage, donc une restauration se "
          "défait ; si cette mise de côté échoue, la restauration est annulée "
          "et rien n'est remplacé. Si recharges.json est abîmé (illisible, ou "
          "retouché avec une date ou un nombre impossible) ou a disparu, "
          "l'application reprend d'elle-même la sauvegarde la plus récente "
-         "au démarrage, et vous le dit. À chaque fermeture, si vos données ont changé, une copie "
+         "au démarrage, et vous le dit. De même si tarifs.json est abîmé : "
+         "sa copie saine la plus récente reprend sa place, et le fichier "
+         "abîmé est gardé à côté. À chaque fermeture, si vos données ont changé, une copie "
          "datée est aussi faite dans le sous-dossier Sauvegardes : les 10 "
          "plus récentes y restent, plus la dernière de chaque mois ; les "
          "autres partent à la Corbeille de Windows."),
