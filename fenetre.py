@@ -693,9 +693,18 @@ class FenetrePrincipale(QMainWindow):
             return
         if incident["copie"]:
             quand = incident["date"].strftime("%d/%m/%Y à %H:%M")
+            # Fichier abîmé (26/10/2026) plutôt que disparu : il est gardé
+            # à part, et le message le dit.
+            if incident.get("cause") == "illisible":
+                constat = ("Le fichier de vos tarifs (tarifs.json) était "
+                           "abîmé et ne pouvait plus être lu. Il est gardé à "
+                           f"part sous le nom « {incident['mis_de_cote']} ».")
+            else:
+                constat = ("Le fichier de vos tarifs (tarifs.json) avait "
+                           "disparu.")
             QMessageBox.warning(
                 self, "Tarifs remis en place",
-                "Le fichier de vos tarifs (tarifs.json) avait disparu.\n\n"
+                f"{constat}\n\n"
                 f"Il a été remplacé par sa copie du {quand} "
                 f"({incident['copie']}).\n\n"
                 "Vérifiez vos prix dans la page « Tarifs » : une modification "

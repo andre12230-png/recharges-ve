@@ -114,8 +114,18 @@ def sauvegarder(fichiers: list[Path | None], destination: Path,
             "mention « INACHEVÉE » : ne vous en servez pas.") from e
 
     # Une copie n'est une sauvegarde que si elle est identique a l'original.
+    # La relecture peut elle aussi echouer (cle retiree a ce moment) : elle
+    # est rattrapee comme la copie (audits du 26/10/2026, constat A9).
     for f in presents:
-        if _empreinte(f) != _empreinte(en_cours / f.name):
+        try:
+            identique = _empreinte(f) == _empreinte(en_cours / f.name)
+        except OSError as e:
+            _marquer_inachevee(en_cours)
+            raise SauvegardeImpossible(
+                f"La copie n'a pas pu être relue ({e.strerror or e}). La clé "
+                "a-t-elle été retirée ? Le dossier commencé porte la mention "
+                "« INACHEVÉE » : ne vous en servez pas.") from e
+        if not identique:
             _marquer_inachevee(en_cours)
             raise SauvegardeImpossible(
                 f"La copie de {f.name} ne correspond pas à l'original : ne "

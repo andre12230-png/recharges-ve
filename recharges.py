@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -213,7 +214,8 @@ def _fichier_lisible(chemin: Path, prefixe: str = "recharges") -> bool:
     return structure_recharges_valide(data)
 
 
-def _mettre_de_cote(chemin: Path) -> Path | None:
+def _mettre_de_cote(chemin: Path,
+                    prefixe: str = "recharges") -> Path | None:
     """Range le fichier illisible à part, pour pouvoir y repêcher des saisies.
 
     Il n'est surtout pas mis dans backups/ (voir _creer_backup) : il est
@@ -221,7 +223,7 @@ def _mettre_de_cote(chemin: Path) -> Path | None:
     """
     try:
         horodatage = datetime.now().strftime("%Y%m%d_%H%M%S")
-        dest = chemin.with_name(f"recharges_illisible_{horodatage}.json")
+        dest = chemin.with_name(f"{prefixe}_illisible_{horodatage}.json")
         shutil.copy2(chemin, dest)
         return dest
     except OSError as e:
@@ -371,9 +373,17 @@ def _creer_backup(fichier: Path | None = None,
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         maintenant = datetime.now()
         horodatage = maintenant.strftime("%Y%m%d_%H%M%S")
+        # Deux enregistrements dans la même seconde : la seconde copie prend
+        # un suffixe numéroté au lieu d'être sautée (audits du 26/10/2026,
+        # constat #16). « _02 » se range après le nom sans suffixe, et sur
+        # deux chiffres « _10 » après « _09 » : l'ordre alphabétique de la
+        # rotation reste l'ordre chronologique.
         dest = BACKUP_DIR / f"{prefixe}_{horodatage}.json"
-        if not dest.exists():
-            shutil.copy2(fichier, dest)
+        n = 2
+        while dest.exists():
+            dest = BACKUP_DIR / f"{prefixe}_{horodatage}_{n:02d}.json"
+            n += 1
+        shutil.copy2(fichier, dest)
         # rotation : ne garder que les MAX_BACKUPS plus récents. Le « 2 » du
         # motif est le debut de l'annee : il evite d'attraper les sauvegardes
         # du jour, nommees {prefixe}_jour_...
@@ -426,6 +436,30 @@ def _relancer_au_nom_de(e: Exception, cible: Path) -> None:
     raise e
 
 
+# Nouveaux essais quand Windows refuse de remplacer un fichier qu'un autre
+# programme lit à cet instant (antivirus, indexation, pv-dashboard) : 5
+# essais espacés de 0,2 s, soit moins d'une seconde d'attente au pire.
+ESSAIS_ECRITURE = 5
+PAUSE_ENTRE_ESSAIS = 0.2
+
+
+def _remplacer(tmp: str, cible: Path) -> None:
+    """os.replace, réessayé si le fichier est un instant occupé.
+
+    Sous Windows, os.replace échoue (PermissionError) si un autre programme
+    a le fichier ouvert au même moment. La saisie échouait alors d'un coup
+    (audits du 26/10/2026, constat #9) ; le plus souvent, le fichier est
+    libre une fraction de seconde plus tard."""
+    for essai in range(1, ESSAIS_ECRITURE + 1):
+        try:
+            os.replace(tmp, cible)
+            return
+        except PermissionError:
+            if essai == ESSAIS_ECRITURE:
+                raise
+            time.sleep(PAUSE_ENTRE_ESSAIS)
+
+
 def sauvegarder_donnees(data: dict) -> None:
     """Sauvegarde atomique : backup, écriture dans un fichier temporaire,
     fsync, puis remplacement atomique. Évite toute corruption en cas de crash."""
@@ -438,7 +472,7 @@ def sauvegarder_donnees(data: dict) -> None:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, DATA_FILE)  # atomique sur un même volume
+        _remplacer(tmp, DATA_FILE)  # atomique sur un même volume
     except Exception as e:
         Path(tmp).unlink(missing_ok=True)
         _relancer_au_nom_de(e, DATA_FILE)
@@ -625,6 +659,36 @@ def _tarifs_disparus() -> dict:
     return contenu
 
 
+def _reparer_tarifs(erreur: Exception) -> dict | None:
+    """tarifs.json est illisible : le fichier abîmé est mis de côté, la
+    copie saine la plus récente (backups/ ou tarifs.json.avant) prend sa
+    place, et l'utilisateur en est prévenu (INCIDENT_TARIFS). Rend le
+    contenu remis en place, ou None s'il n'existe aucune copie saine ou si
+    la remise en place échoue."""
+    global INCIDENT_TARIFS
+    copie = _copie_de_tarifs_lisible()
+    if copie is None:
+        return None
+    mis_de_cote = _mettre_de_cote(TARIFS_FILE, "tarifs")
+    if mis_de_cote is None:
+        return None      # jamais écraser le fichier abîmé sans l'avoir gardé
+    try:
+        shutil.copy2(copie, TARIFS_FILE)
+        contenu = json.loads(TARIFS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"[tarifs] réparation impossible : {e}")
+        return None
+    print(f"[tarifs] tarifs.json illisible ({erreur}), "
+          f"restauration depuis {copie.name}")
+    INCIDENT_TARIFS = {
+        "cause": "illisible",
+        "copie": copie.name,
+        "date": datetime.fromtimestamp(copie.stat().st_mtime),
+        "mis_de_cote": mis_de_cote.name if mis_de_cote else None,
+    }
+    return contenu
+
+
 def _creer_tarifs_par_defaut() -> dict:
     """Fabrique un tarifs.json neuf, et le renvoie.
 
@@ -668,6 +732,12 @@ def _lire_tarifs_json() -> dict:
                 "existe et qu'il est accessible en écriture."
             )
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        # Fichier abîmé : réparé depuis la copie saine la plus récente, comme
+        # recharges.json (audits du 26/10/2026, constat #8). Avant,
+        # l'application s'arrêtait sur une erreur alors qu'une copie existait.
+        reparation = _reparer_tarifs(e)
+        if reparation is not None:
+            return reparation
         # _ecrire_tarifs conserve une copie d'avant la derniere modification :
         # autant l'indiquer, c'est la sortie de secours la plus simple.
         secours = TARIFS_FILE.with_suffix(".json.avant")
@@ -1312,7 +1382,7 @@ def _ecrire_tarifs(contenu: dict) -> None:
             json.dump(contenu, f, indent=2, ensure_ascii=False)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, TARIFS_FILE)
+        _remplacer(tmp, TARIFS_FILE)
     except Exception as e:
         Path(tmp).unlink(missing_ok=True)
         _relancer_au_nom_de(e, TARIFS_FILE)
@@ -3411,15 +3481,19 @@ def _message_hors_grille(debuts: list[datetime], tarifs: list[dict]) -> str:
                     "ne sont pas enregistrées.")
 
 
-def recalculer_tout() -> tuple[int, list[str]]:
+def recalculer_tout(puissance_kw: float | None = None) -> tuple[int, list[str]]:
     """Recalcule le coût de toutes les recharges maison à partir des tarifs courants.
 
     Rend (nombre de recharges recalculées, dates de celles laissées telles
     quelles). Ces dernières étaient passées sous silence jusqu'à la v2.0.0 :
-    le message n'annonçait que les recalculées."""
+    le message n'annonçait que les recalculées.
+
+    `puissance_kw` : la puissance de borne à utiliser, si elle n'est pas
+    encore enregistrée (page Paramètres) ; sinon, celle des réglages."""
     data = charger_donnees(pour_modification=True)
     tarifs = charger_tarifs()
-    puissance = charger_config()["puissance_borne_kw"]
+    puissance = (charger_config()["puissance_borne_kw"]
+                 if puissance_kw is None else puissance_kw)
     n = 0
     laissees: list[str] = []
     for r in data["recharges"]:
@@ -3488,6 +3562,9 @@ def enregistrer_reglages_borne(reglages: dict) -> dict:
                                    config["puissance_borne_kw"]))
     decalees = recalculees = 0
     laissees: list[str] = []
+    # L'état d'avant, pour le remettre si l'enregistrement des réglages
+    # échoue après celui des recharges (voir plus bas).
+    avant = charger_donnees(pour_modification=True)
     if nouvelle != ancienne:
         data = charger_donnees(pour_modification=True)
         tarifs = charger_tarifs()
@@ -3532,10 +3609,27 @@ def enregistrer_reglages_borne(reglages: dict) -> dict:
         # reste en place et décrit toujours les heures enregistrées.
         if decalees:
             sauvegarder_donnees(data)
-    enregistrer_config(reglages)
-    # La puissance d'abord enregistrée : recalculer_tout() la relit.
+    # Le recalcul pour la nouvelle puissance AVANT d'enregistrer celle-ci :
+    # s'il échoue, l'ancienne puissance reste, et réenregistrer la nouvelle
+    # relancera le recalcul. Dans l'ordre inverse, la puissance était déjà
+    # enregistrée, aucun changement n'était plus vu, et les coûts restaient
+    # ceux de l'ancienne (audits du 26/10/2026, constat A3).
     if puissance != config["puissance_borne_kw"]:
-        recalculees, sans_tarif = recalculer_tout()
+        recalculees, sans_tarif = recalculer_tout(puissance_kw=puissance)
         laissees = list(dict.fromkeys(laissees + sans_tarif))
+    # Les réglages en dernier. S'ils ne peuvent pas être écrits, les
+    # recharges reprennent leur état d'avant : heures et coûts doivent
+    # toujours correspondre au réglage enregistré (même constat A3 : une
+    # panne ici laissait des recharges décalées avec l'ancien réglage, et
+    # le réenregistrer ne les remettait pas en place).
+    try:
+        enregistrer_config(reglages)
+    except Exception:
+        if decalees or recalculees:
+            try:
+                sauvegarder_donnees(avant)
+            except Exception as e:
+                print(f"[réglages] remise en état impossible : {e}")
+        raise
     return {"decalees": decalees, "recalculees": recalculees,
             "laissees": laissees}
