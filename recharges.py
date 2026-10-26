@@ -1503,6 +1503,26 @@ def _trouver_tarif(date_debut: datetime, tarifs: list[dict]) -> dict | None:
     return None
 
 
+def _session_couverte(debut: datetime, fin: datetime,
+                      tarifs: list[dict]) -> bool:
+    """Vrai si la grille couvre toute la session [debut, fin[ — fin
+    exclue : une recharge finie a minuit n'a pas besoin du tarif du
+    lendemain. Meme parcours que _morceaux_par_tarif, sans erreur."""
+    curseur = debut
+    while curseur < fin:
+        tarif = _trouver_tarif(curseur, tarifs)
+        if tarif is None:
+            return False
+        if not tarif.get("fin"):
+            return True          # tarif en cours : il va jusqu'au bout
+        lendemain = datetime.fromisoformat(tarif["fin"]) + timedelta(days=1)
+        borne = lendemain.replace(hour=0, minute=0, second=0, microsecond=0)
+        if borne <= curseur:
+            return True          # grille incoherente : calculer_cout le dira
+        curseur = borne
+    return True
+
+
 MINUTES_PAR_JOUR = 24 * 60
 
 
@@ -1690,10 +1710,18 @@ def _fin_de_charge(debut: datetime, fin: datetime, kwh: float,
     livrés ; la voiture reste ensuite branchée sans charger. Jamais après la
     fin de la session : une puissance trop faible pour livrer les kWh à
     temps revient à la répartition uniforme.
+
+    La durée de charge est comptée en temps réel (apres_duree) et comparée à
+    la session en temps réel : une simple addition d'horloge finissait une
+    heure trop tôt la nuit du passage à l'heure d'été (audits du 26/10/2026,
+    constat #1).
     """
     if puissance_kw <= 0:
         return fin
-    return min(fin, debut + timedelta(hours=kwh / puissance_kw))
+    duree_charge = timedelta(hours=kwh / puissance_kw)
+    if duree_charge.total_seconds() >= _secondes_reelles(debut, fin):
+        return fin
+    return apres_duree(debut, duree_charge)
 
 
 def calculer_cout(debut: datetime, fin: datetime, kwh: float,
@@ -2753,10 +2781,13 @@ def _date_csv(texte: str) -> datetime | None:
     return lue
 
 
-def _analyser_ligne_csv(ligne: str, facteur_kwh: float = 1.0) -> tuple | None:
+def _analyser_ligne_csv(ligne: str, facteur_kwh: float = 1.0,
+                        nb_titres: int = 0) -> tuple | None:
     """Reconnait une ligne d'export de borne, ou renvoie None.
 
     `facteur_kwh` convertit l'energie lue en kWh (0,001 pour des Wh).
+    `nb_titres` : le nombre de colonnes de la ligne de titres, s'il y en a
+    une (0 sinon) ; une ligne qui en a davantage est refusee.
 
     Les colonnes attendues sont, dans cet ordre : identifiant du chargeur,
     debut, fin, energie, duree, cout — la disposition qu'emploient les
@@ -2776,7 +2807,17 @@ def _analyser_ligne_csv(ligne: str, facteur_kwh: float = 1.0) -> tuple | None:
         champs = next(csv.reader([ligne], delimiter=sep))
     except (csv.Error, StopIteration):
         return None
+    # Un séparateur en fin de ligne (certains tableurs) n'est pas un champ.
+    while len(champs) > 6 and not champs[-1].strip():
+        champs.pop()
     if len(champs) < 6:
+        return None
+    # Plus de champs que de titres : une virgule décimale sans guillemets
+    # dans un fichier séparé par des virgules (« 5,25 » lu « 5 » puis
+    # « 25 »). Lue quand même, la ligne donnait une énergie et un coût faux
+    # sans alerte (audits du 26/10/2026, constat #2) : elle est maintenant
+    # comptée comme non reconnue.
+    if nb_titres >= 6 and len(champs) > nb_titres:
         return None
 
     debut = _date_csv(champs[1])
@@ -2812,6 +2853,19 @@ def _facteur_kwh_du_titre(ligne_de_titres: str) -> float:
     return 0.001 if "wh" in titre and "kwh" not in titre else 1.0
 
 
+def _nb_colonnes_du_titre(ligne_de_titres: str) -> int:
+    """Le nombre de colonnes de la ligne de titres (separateur de fin de
+    ligne non compte), ou 0 si elle est illisible."""
+    sep = ";" if ligne_de_titres.count(";") >= 5 else ","
+    try:
+        titres = next(csv.reader([ligne_de_titres], delimiter=sep))
+    except (csv.Error, StopIteration):
+        return 0
+    while titres and not titres[-1].strip():
+        titres.pop()
+    return len(titres)
+
+
 def _depouiller_csv(contenu: str) -> tuple[list[tuple], int, int]:
     """Depouille un export de borne.
 
@@ -2821,13 +2875,15 @@ def _depouiller_csv(contenu: str) -> tuple[list[tuple], int, int]:
     """
     lignes = [ligne for ligne in contenu.splitlines() if ligne.strip()]
     facteur_kwh = 1.0
+    nb_titres = 0
     if lignes and not _DATE_VISIBLE.search(lignes[0]):
         facteur_kwh = _facteur_kwh_du_titre(lignes[0])
+        nb_titres = _nb_colonnes_du_titre(lignes[0])
         lignes = lignes[1:]
 
     records, non_reconnues = [], 0
     for ligne in lignes:
-        champs = _analyser_ligne_csv(ligne, facteur_kwh)
+        champs = _analyser_ligne_csv(ligne, facteur_kwh, nb_titres)
         if champs is not None:
             records.append(champs)
         else:
@@ -3270,8 +3326,12 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         # en cause et quoi faire (analyse « nouvel utilisateur » du
         # 19/10/2026 ; avant, l'import s'arretait a la premiere avec la
         # formule de la saisie a la main, « Vérifiez la date saisie »).
-        if tarifs and (_trouver_tarif(debut, tarifs) is None
-                       or _trouver_tarif(fin, tarifs) is None):
+        # Toute la session est verifiee, jour par jour : ses deux bouts
+        # seulement laissaient passer un trou au milieu (l'import echouait
+        # alors avec le message de la saisie a la main), et refusaient une
+        # fin pile a minuit le lendemain du dernier jour couvert (audits du
+        # 26/10/2026, constats #7 et A8).
+        if tarifs and not _session_couverte(debut, fin, tarifs):
             hors_grille.append(debut)
             continue
         calc = calculer_cout(debut, fin, kwh, tarifs,

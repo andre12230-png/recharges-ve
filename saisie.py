@@ -211,6 +211,10 @@ def parse_date_fr(s: str, *, passe: bool = False,
 AIDE_DUREE = ("Une durée s'écrit avec un « + » devant : « +6h12 », « +6h », "
               "ou « +45min ».")
 
+# La plus longue durée acceptée en minutes : 30 jours, large pour une
+# voiture restée branchée pendant des vacances.
+DUREE_MAX_MINUTES = 30 * 24 * 60
+
 
 def lire_duree(texte: str) -> timedelta | None:
     """La durée tapée à la place d'une heure, ou None si ce n'en est pas une.
@@ -231,8 +235,16 @@ def lire_duree(texte: str) -> timedelta | None:
 
     if reste.endswith("min"):
         nombre = reste[:-3].strip()
-        if not nombre.isdigit():
+        # isascii() en plus : isdigit() accepte aussi « ² » ou « ³ », que
+        # int() refuse ensuite avec un message en anglais (audits du
+        # 26/10/2026, constat #14).
+        if not (nombre.isascii() and nombre.isdigit()):
             raise ValueError(AIDE_DUREE)
+        # Borne avant timedelta, qui plante sur un nombre gigantesque
+        # (constat #13).
+        if int(nombre) > DUREE_MAX_MINUTES:
+            raise ValueError("Une recharge ne peut pas durer plus de "
+                             f"{DUREE_MAX_MINUTES // (24 * 60)} jours.")
         duree = timedelta(minutes=int(nombre))
     else:
         try:
