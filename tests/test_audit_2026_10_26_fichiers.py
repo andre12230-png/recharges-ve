@@ -206,6 +206,53 @@ def test_panne_du_recalcul_laisse_l_ancienne_puissance(dossier, monkeypatch):
     assert r.charger_config()["puissance_borne_kw"] == 0
 
 
+# ---------- #12 : la rotation de backups\ passe par la Corbeille ----------
+
+def preparer_quinze_sauvegardes(dossier: Path) -> None:
+    """15 sauvegardes anciennes (le maximum gardé) et un recharges.json :
+    le prochain enregistrement en fait une 16e, la plus vieille doit
+    partir."""
+    for n in range(15):
+        ecrire(dossier / "backups" / f"recharges_20260101_0000{n:02d}.json",
+               {"recharges": []})
+    ecrire(dossier / "recharges.json", {"recharges": []})
+    r.vider_cache()
+
+
+def test_la_plus_vieille_sauvegarde_part_a_la_corbeille(dossier,
+                                                        monkeypatch):
+    """Décision d'André du 26/10/2026 : jamais de suppression définitive
+    quand la Corbeille est disponible."""
+    corbeille = dossier / "corbeille_simulee"
+    corbeille.mkdir()
+
+    def a_la_corbeille(chemin):
+        Path(chemin).rename(corbeille / Path(chemin).name)
+        return True
+    monkeypatch.setattr(r, "mettre_a_la_corbeille", a_la_corbeille)
+    preparer_quinze_sauvegardes(dossier)
+
+    r.sauvegarder_donnees({"recharges": []})
+
+    assert [p.name for p in corbeille.iterdir()] == [
+        "recharges_20260101_000000.json"]
+    assert len(list((dossier / "backups").glob("recharges_2*.json"))) == 15
+
+
+def test_sans_corbeille_la_rotation_continue(dossier, monkeypatch):
+    """Données sur une clé USB ou un disque réseau : Windows n'a pas de
+    Corbeille. La plus vieille sauvegarde est alors supprimée comme avant,
+    sinon backups\\ grossirait sans fin."""
+    monkeypatch.setattr(r, "mettre_a_la_corbeille", lambda chemin: False)
+    preparer_quinze_sauvegardes(dossier)
+
+    r.sauvegarder_donnees({"recharges": []})
+
+    restantes = sorted((dossier / "backups").glob("recharges_2*.json"))
+    assert len(restantes) == 15
+    assert restantes[0].name == "recharges_20260101_000001.json"
+
+
 def test_sans_panne_les_reglages_passent_toujours(dossier):
     importer_nuit(dossier)
     bilan = r.enregistrer_reglages_borne(

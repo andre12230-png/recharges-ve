@@ -83,6 +83,21 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 @pytest.fixture(autouse=True)
+def pas_de_vraie_corbeille(monkeypatch):
+    """Depuis le 26/10/2026, la rotation de backups/ envoie les vieilles
+    sauvegardes a la Corbeille de Windows. Les tests qui enregistrent plus
+    de 15 fois les y enverraient vraiment, dans celle de l'utilisateur.
+    Ici, la Corbeille est « indisponible » : la rotation supprime comme
+    avant. Les tests de la Corbeille remplacent cette reponse."""
+    try:
+        import recharges
+    except Exception:
+        return
+    monkeypatch.setattr(recharges, "mettre_a_la_corbeille",
+                        lambda chemin: False)
+
+
+@pytest.fixture(autouse=True)
 def aucune_boite_modale(monkeypatch):
     """Une boite de confirmation (composants.confirmer) ouverte pendant un
     test attendrait un clic que personne ne donnera : la suite resterait

@@ -227,11 +227,13 @@ def _disque_local(chemin: Path) -> bool:
 
 
 def mettre_a_la_corbeille(chemin: Path) -> bool:
-    """Met un dossier a la Corbeille de Windows, d'ou il peut etre recupere.
+    """Met un dossier ou un fichier a la Corbeille de Windows, d'ou il peut
+    etre recupere (les vieilles sauvegardes de backups/ y passent aussi
+    depuis le 26/10/2026).
 
-    Rend True si le dossier est parti, False si ce n'etait pas possible (pas
-    sous Windows, pas sur un disque fixe, refus de Windows) : le dossier reste
-    alors en place. Jamais de suppression definitive."""
+    Rend True s'il est parti, False si ce n'etait pas possible (pas sous
+    Windows, pas sur un disque fixe, refus de Windows) : il reste alors en
+    place. Jamais de suppression definitive."""
     if sys.platform != "win32" or not _disque_local(chemin):
         return False
     import ctypes

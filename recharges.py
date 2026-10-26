@@ -23,6 +23,8 @@ from pathlib import Path
 
 from erreurs import erreur_en_clair
 from formats import fmt_kwh, fmt_nb_recharges, fmt_nombre
+# Vieilles sauvegardes de backups/ a la Corbeille (decision du 26/10/2026).
+from sauvegarde_externe import mettre_a_la_corbeille
 # Durees vraies la nuit du changement d'heure (voir temps_reel.py).
 from temps_reel import apres_duree, secondes_reelles as _secondes_reelles
 
@@ -347,6 +349,16 @@ def _lire_donnees_du_disque() -> dict:
         raise
 
 
+def _retirer_sauvegarde(vieux: Path) -> None:
+    """Sort une sauvegarde de la rotation de backups/ : a la Corbeille de
+    Windows, d'ou elle peut etre recuperee (decision d'Andre du 26/10/2026,
+    constat #12 des audits). Sans Corbeille (donnees sur une cle USB ou un
+    disque reseau, autre systeme que Windows), elle est supprimee comme
+    avant : sinon backups/ grossirait sans fin."""
+    if not mettre_a_la_corbeille(vieux):
+        vieux.unlink(missing_ok=True)
+
+
 def _creer_backup(fichier: Path | None = None,
                   prefixe: str = "recharges") -> None:
     """Copie l'état actuel dans backups/ avant de l'écraser, avec rotation.
@@ -389,7 +401,7 @@ def _creer_backup(fichier: Path | None = None,
         # du jour, nommees {prefixe}_jour_...
         backups = sorted(BACKUP_DIR.glob(f"{prefixe}_2*.json"))
         for vieux in backups[:-MAX_BACKUPS]:
-            vieux.unlink(missing_ok=True)
+            _retirer_sauvegarde(vieux)
 
         # sauvegarde du jour : la premiere de la journee est mise de cote et
         # echappe a la rotation ci-dessus (nom different)
@@ -398,7 +410,7 @@ def _creer_backup(fichier: Path | None = None,
             shutil.copy2(fichier, du_jour)
         quotidiens = sorted(BACKUP_DIR.glob(f"{prefixe}_jour_*.json"))
         for vieux in quotidiens[:-MAX_BACKUPS_QUOTIDIENS]:
-            vieux.unlink(missing_ok=True)
+            _retirer_sauvegarde(vieux)
     except OSError as e:
         print(f"[backup] impossible : {e}")
         # L'écriture qui suit aura lieu quand même (refuser d'enregistrer
