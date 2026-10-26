@@ -339,7 +339,7 @@ def agreger_par(recharges: list[dict], champ: str, lieu: str | None = None,
         a = agregats.setdefault(cle, {"n": 0, "kwh": 0.0, "cout": 0.0})
         a["n"] += 1
         a["kwh"] += r.get("kwh", 0)
-        a["cout"] += r.get("cout_eur", 0)
+        a["cout"] += r.get("cout_eur") or 0
     return agregats
 
 def filtrer_par_recherche(recharges: list[dict], texte: str) -> list[dict]:
@@ -414,7 +414,7 @@ def texte_resume(recharges: list[dict]) -> str:
 
     n = len(recharges)
     total_kwh = sum(r.get("kwh", 0) for r in recharges)
-    total_cout = sum(r.get("cout_eur", 0) for r in recharges)
+    total_cout = sum(r.get("cout_eur") or 0 for r in recharges)
     txt = (f"   {n} recharge{'s' if n > 1 else ''} · {fr(total_kwh, 2)}\xa0kWh · "
            f"{fr(total_cout, 2)}\xa0€")
     if total_kwh:
@@ -424,7 +424,7 @@ def texte_resume(recharges: list[dict]) -> str:
     # inutile de repeter la moyenne si la selection ne contient QUE de
     # l'exterieur (elle serait identique a la moyenne globale)
     if kwh_ext and len(exterieures) != len(recharges):
-        cout_ext = sum(r.get("cout_eur", 0) for r in exterieures)
+        cout_ext = sum(r.get("cout_eur") or 0 for r in exterieures)
         txt += f"   ·   extérieur : {fr(cout_ext / kwh_ext, 4)}\xa0€/kWh"
     return txt
 

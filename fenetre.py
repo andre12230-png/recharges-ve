@@ -561,7 +561,7 @@ class FenetrePrincipale(QMainWindow):
         }
         periode = periodes_par_vue.get(self.vue_courante, "Tout")
         selection = filtrer_par_periode(data["recharges"], periode)
-        total = sum(r.get("cout_eur", 0) for r in selection)
+        total = sum(r.get("cout_eur") or 0 for r in selection)
         # La tuile dit toujours sur quelle periode porte son chiffre :
         # « Total dépense » ne disait pas qu'il changeait d'une page a
         # l'autre (audit de design du 03/10/2026).

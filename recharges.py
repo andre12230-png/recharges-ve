@@ -174,7 +174,14 @@ def structure_recharges_valide(data) -> bool:
     for recharge in data["recharges"]:
         if not isinstance(recharge, dict):
             return False
-        if "date" in recharge and not _est_date(recharge["date"]):
+        # Une date et une énergie chiffrées, ce que l'application a
+        # toujours écrit. Une recharge « {} » ou à énergie « null »
+        # passait, puis les totaux plantaient (audits du 26/10/2026, A6).
+        # Le coût, lui, peut être vide ou absent dans d'anciens fichiers :
+        # il compte alors 0 dans les sommes (« or 0 » partout).
+        if not _est_date(recharge.get("date")):
+            return False
+        if not _est_nombre(recharge.get("kwh")):
             return False
         for champ in ("fin", "debut_borne"):
             if recharge.get(champ) not in (None, "") and not _est_date(
@@ -778,7 +785,10 @@ def charger_tarifs() -> list[dict]:
     # Défaut A4 : chaque période est vérifiée avec les mêmes règles qu'une
     # saisie de la page Tarifs. Un fichier modifié à la main ne doit pas
     # faire calculer des coûts faux sans prévenir. Les tarifs sont rendus
-    # tels qu'ils sont écrits : la vérification ne les modifie pas.
+    # tels qu'ils sont écrits, à une exception près : les montants écrits
+    # en texte (« "0.2" ») sont rendus en nombres. La vérification les
+    # acceptait, puis le calcul plantait sur le texte (audits du 26/10/2026,
+    # constat A7) : la valeur vérifiée est maintenant celle utilisée.
     secours = TARIFS_FILE.with_suffix(".json.avant")
     piste = (f" Une copie d'avant la dernière modification existe "
              f"({secours.name}) : vous pouvez la renommer en "
@@ -796,7 +806,21 @@ def charger_tarifs() -> list[dict]:
                 f"tarifs.json est invalide : le tarif « {nom} » est refusé. "
                 f"{e} S'il a été modifié à la main, c'est à cet endroit "
                 f"qu'il faut regarder.{piste}")
-    return tarifs
+    return [_montants_en_nombres(tarif) for tarif in tarifs]
+
+
+# Les montants d'une période tarifaire (voir charger_tarifs).
+_MONTANTS_TARIF = ("prix_kwh", "prix_hp", "prix_hc", "abonnement_mensuel")
+
+
+def _montants_en_nombres(tarif: dict) -> dict:
+    """Une copie du tarif dont les montants présents sont des nombres.
+    À n'appeler qu'après valider_tarif, qui garantit qu'ils sont lisibles."""
+    propre = dict(tarif)
+    for cle in _MONTANTS_TARIF:
+        if propre.get(cle) is not None:
+            propre[cle] = float(propre[cle])
+    return propre
 
 
 def charger_config() -> dict:
@@ -1026,7 +1050,7 @@ def kilometres_par_annee(releves: list[dict] | None = None,
             de_l_annee = [x for x in dedans
                           if x.get("date", "")[:4] == str(annee)]
             kwh = sum(x.get("kwh", 0) for x in de_l_annee)
-            cout = sum(x.get("cout_eur", 0) for x in de_l_annee)
+            cout = sum(x.get("cout_eur") or 0 for x in de_l_annee)
             debut = max(t0, datetime(annee, 1, 1))
             fin = min(t1, datetime(annee + 1, 1, 1))
             part = (fin - debut).total_seconds() / duree if duree else 0
@@ -1229,7 +1253,18 @@ def valider_tarif(tarif: dict) -> dict:
             if len(paire) != 2:
                 raise ValueError("Chaque plage doit avoir une heure de début "
                                  "et une heure de fin.")
-            plages.append([_verifier_heure(paire[0]), _verifier_heure(paire[1])])
+            debut_hc, fin_hc = (_verifier_heure(paire[0]),
+                                _verifier_heure(paire[1]))
+            # « 00:00 - 00:00 » ne donne aucune heure creuse, alors que
+            # l'utilisateur voulait sans doute 24 h (audits du 26/10/2026,
+            # constat #18).
+            if debut_hc == fin_hc:
+                raise ValueError(
+                    f"Une plage d'heures creuses ne peut pas commencer et "
+                    f"finir à la même heure ({debut_hc} – {fin_hc}) : elle "
+                    "ne compterait aucune heure. Si toutes les heures sont "
+                    "au même prix, choisissez un tarif à prix unique.")
+            plages.append([debut_hc, fin_hc])
         if not plages:
             raise ValueError("Un tarif heures pleines / heures creuses doit "
                              "avoir au moins une plage d'heures creuses.")
@@ -1253,26 +1288,30 @@ def valider_tarif(tarif: dict) -> dict:
 def _avertissements_grille(tarifs: list[dict]) -> list[str]:
     """Signale les chevauchements et les trous entre periodes tarifaires.
 
-    Ce ne sont pas des erreurs bloquantes : c'est peut-etre voulu. Mais un
-    chevauchement rend le tarif applique imprevisible, et un trou fait
-    refuser les recharges qui tombent dedans.
+    Ce ne sont pas des erreurs bloquantes : c'est peut-etre voulu. Pendant
+    un chevauchement, la periode la plus recente l'emporte (voir
+    _trouver_tarif) : on le dit, pour que l'utilisateur verifie que c'est
+    bien ce qu'il veut. Un trou fait refuser les recharges qui tombent
+    dedans.
     """
     messages = []
     tries = sorted(tarifs, key=lambda t: t["debut"])
     for precedent, suivant in zip(tries, tries[1:]):
+        debut = datetime.fromisoformat(suivant["debut"]).date()
         fin_prec = precedent.get("fin")
         if not fin_prec:
             messages.append(
-                f"« {precedent['nom']} » n'a pas de date de fin : il continue "
-                f"de s'appliquer, et « {suivant['nom']} » ne servira jamais. "
-                f"Donnez une date de fin à « {precedent['nom']} ».")
+                f"« {precedent['nom']} » n'a pas de date de fin : à partir du "
+                f"{debut:%d/%m/%Y}, c'est « {suivant['nom']} », plus récent, "
+                f"qui s'applique. Donnez une date de fin à "
+                f"« {precedent['nom']} » pour que la grille soit claire.")
             continue
         fin = datetime.fromisoformat(fin_prec).date()
-        debut = datetime.fromisoformat(suivant["debut"]).date()
         if debut <= fin:
             messages.append(
                 f"« {precedent['nom']} » et « {suivant['nom']} » se "
-                "chevauchent : le tarif appliqué serait imprévisible.")
+                f"chevauchent : pendant le chevauchement, c'est "
+                f"« {suivant['nom']} », le plus récent, qui s'applique.")
         elif (debut - fin).days > 1:
             messages.append(
                 f"Il manque une période entre le {fin:%d/%m/%Y} et le "
@@ -1576,13 +1615,43 @@ def _a_la_minute(dt: datetime) -> datetime:
 
 
 def _trouver_tarif(date_debut: datetime, tarifs: list[dict]) -> dict | None:
+    """Le tarif qui s'applique ce jour-là, ou None.
+
+    Si plusieurs périodes couvrent ce jour (elles se chevauchent), c'est
+    celle qui commence le plus tard qui l'emporte : la plus récente, souvent
+    une exception ajoutée dans une période plus longue. Avant, c'était la
+    première dans l'ordre du fichier, et le prix dépendait de cet ordre
+    (audits du 26/10/2026, constat #11)."""
     d = date_debut.date()
+    retenu, debut_retenu = None, None
     for t in tarifs:
         t_debut = datetime.fromisoformat(t["debut"]).date()
         t_fin = datetime.fromisoformat(t["fin"]).date() if t.get("fin") else None
         if d >= t_debut and (t_fin is None or d <= t_fin):
-            return t
-    return None
+            if retenu is None or t_debut > debut_retenu:
+                retenu, debut_retenu = t, t_debut
+    return retenu
+
+
+def _frontiere(curseur: datetime, tarif: dict, tarifs: list[dict],
+               fin: datetime) -> datetime:
+    """L'instant où `tarif`, appliqué à `curseur`, cesse de s'appliquer :
+    minuit au lendemain de sa date de fin, ou plus tôt, minuit le jour où
+    commence une période plus récente (voir _trouver_tarif). `fin` si
+    rien ne l'arrête avant."""
+    if tarif.get("fin"):
+        # Le tarif couvre sa date de fin en entier : sa frontiere est donc
+        # minuit au lendemain de cette date.
+        lendemain = datetime.fromisoformat(tarif["fin"]) + timedelta(days=1)
+        borne = lendemain.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        borne = fin          # tarif en cours : il va jusqu'au bout
+    for autre in tarifs:
+        debut_autre = datetime.fromisoformat(autre["debut"]).replace(
+            hour=0, minute=0, second=0, microsecond=0)
+        if curseur < debut_autre < borne:
+            borne = debut_autre
+    return borne
 
 
 def _session_couverte(debut: datetime, fin: datetime,
@@ -1595,10 +1664,9 @@ def _session_couverte(debut: datetime, fin: datetime,
         tarif = _trouver_tarif(curseur, tarifs)
         if tarif is None:
             return False
-        if not tarif.get("fin"):
-            return True          # tarif en cours : il va jusqu'au bout
-        lendemain = datetime.fromisoformat(tarif["fin"]) + timedelta(days=1)
-        borne = lendemain.replace(hour=0, minute=0, second=0, microsecond=0)
+        borne = _frontiere(curseur, tarif, tarifs, fin)
+        if borne >= fin:
+            return True
         if borne <= curseur:
             return True          # grille incoherente : calculer_cout le dira
         curseur = borne
@@ -1739,14 +1807,7 @@ def _morceaux_par_tarif(debut: datetime, fin: datetime,
     curseur = debut
     while curseur < fin:
         tarif = _tarif_ou_erreur(curseur, tarifs)
-        if tarif.get("fin"):
-            # Le tarif couvre sa date de fin en entier : sa frontiere est donc
-            # minuit au lendemain de cette date.
-            lendemain = datetime.fromisoformat(tarif["fin"]) + timedelta(days=1)
-            borne = lendemain.replace(hour=0, minute=0, second=0, microsecond=0)
-        else:
-            borne = fin          # tarif en cours : il va jusqu'au bout
-        prochain = min(borne, fin)
+        prochain = min(_frontiere(curseur, tarif, tarifs, fin), fin)
         if prochain <= curseur:  # securite : evite une boucle infinie si la
             raise ValueError(    # grille est incoherente (fin avant debut)
                 "Grille tarifaire incohérente : impossible de découper la "
@@ -1823,6 +1884,13 @@ def calculer_cout(debut: datetime, fin: datetime, kwh: float,
     que d'enregistrer silencieusement un coût de 0 € (faute de frappe
     sur l'année, grille tarifaire incomplète...).
     """
+    # Une fin avant le début (fichier retouché à la main) était calculée
+    # toute en heures pleines, sans erreur (audits du 26/10/2026, #19).
+    # Les écrans et l'import la refusaient déjà.
+    if fin <= debut:
+        raise ValueError(
+            f"La recharge du {debut:%d/%m/%Y à %H:%M} a une heure de fin qui "
+            "n'est pas après son début : son coût ne peut pas être calculé.")
     if tarifs is None:
         tarifs = charger_tarifs()
     fin = _fin_de_charge(debut, fin, kwh, puissance_kw)
@@ -1931,8 +1999,14 @@ def ajouter_recharge_maison(debut: datetime, fin: datetime | None, kwh: float,
     saisit une recharge le lendemain. Elle reste indispensable en heures
     pleines / heures creuses, ou la duree commande la repartition.
     """
-    if kwh <= 0:
+    # math.isfinite : NaN passait « kwh <= 0 » (toute comparaison avec NaN
+    # est fausse) ; l'écran le refuse, le moteur aussi désormais (audits du
+    # 26/10/2026, constat #15).
+    if not math.isfinite(kwh) or kwh <= 0:
         raise ValueError("L'énergie (kWh) doit être supérieure à zéro.")
+    if cout_wallbox is not None and not math.isfinite(cout_wallbox):
+        raise ValueError("Le coût affiché par la borne n'est pas un nombre "
+                         "valable.")
     if fin is not None and fin <= debut:
         raise ValueError("La fin doit être après le début.")
     calc = (calculer_cout(debut, fin, kwh,
@@ -2048,9 +2122,10 @@ def lieu_canonique(texte: str) -> str:
 def ajouter_recharge_exterieur(kwh: float, cout: float, operateur: str = "",
                                lieu_detail: str = "", date: str | None = None,
                                carte: str = "") -> dict:
-    if kwh <= 0:
+    # math.isfinite : NaN et l'infini (constat #15, voir plus haut).
+    if not math.isfinite(kwh) or kwh <= 0:
         raise ValueError("L'énergie (kWh) doit être supérieure à zéro.")
-    if cout < 0:
+    if not math.isfinite(cout) or cout < 0:
         raise ValueError("Le coût ne peut pas être négatif.")
     recharge = {
         "id": _nouvel_id(),
@@ -2196,9 +2271,10 @@ def modifier_recharge(id_recharge: str, modifs: dict) -> dict:
             r.pop("fin")
         # validations : on refuse avant de sauvegarder (le fichier n'est
         # pas touché si une valeur est incohérente)
-        if r.get("kwh", 0) <= 0:
+        # _est_nombre écarte aussi NaN et l'infini (constat #15).
+        if not _est_nombre(r.get("kwh")) or r["kwh"] <= 0:
             raise ValueError("L'énergie (kWh) doit être supérieure à zéro.")
-        if r.get("cout_eur", 0) < 0:
+        if not _est_nombre(r.get("cout_eur")) or r["cout_eur"] < 0:
             raise ValueError("Le coût ne peut pas être négatif.")
         # recalculer si maison — avec ou sans heure de fin. Sans fin, le
         # cout n'etait pas recalcule jusqu'a la v2.0.0 : passer de 30 a
@@ -2223,7 +2299,7 @@ def modifier_recharge(id_recharge: str, modifs: dict) -> dict:
             r["tarif_id"] = calc["tarif_id"]
             r["tarif_nom"] = calc["tarif_nom"]
         elif r.get("lieu") == "exterieur" and r.get("kwh"):
-            r["prix_kwh"] = _prix_unitaire(round(r.get("cout_eur", 0), 2),
+            r["prix_kwh"] = _prix_unitaire(round(r.get("cout_eur") or 0, 2),
                                            r["kwh"])
         sauvegarder_donnees(data)
         return r
@@ -2691,7 +2767,7 @@ def calculer_consommation() -> dict:
         dedans = [r for r in recharges
                   if precedent["date"] < r.get("date", "") <= suivant["date"]]
         kwh = sum(r.get("kwh", 0) for r in dedans)
-        cout = sum(r.get("cout_eur", 0) for r in dedans)
+        cout = sum(r.get("cout_eur") or 0 for r in dedans)
         kwh_tot += kwh
         cout_tot += cout
         intervalles.append({

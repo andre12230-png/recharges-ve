@@ -159,7 +159,7 @@ def construire(fenetre) -> QWidget:
     ligne.addStretch(1)
     corps.addLayout(ligne)
     kwh = sum(r.get("kwh", 0) for r in choisies)
-    cout = sum(r.get("cout_eur", 0) for r in choisies)
+    cout = sum(r.get("cout_eur") or 0 for r in choisies)
     apercu = QLabel(f"{fmt_nb_recharges(len(choisies))} · {fmt_kwh(kwh)} · "
                     f"{fmt_eur(cout)}")
     apercu.setObjectName("Resume")

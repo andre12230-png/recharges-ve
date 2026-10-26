@@ -36,14 +36,14 @@ def chiffres_de_la_periode(toutes: list[dict], periode: str) -> dict:
     """Tout ce que la page affiche pour une periode, deja calcule."""
     recharges = filtrer_par_periode(toutes, periode)
     total_kwh = sum(r.get("kwh", 0) for r in recharges)
-    total_cout = sum(r.get("cout_eur", 0) for r in recharges)
+    total_cout = sum(r.get("cout_eur") or 0 for r in recharges)
 
     maison = [r for r in recharges if r.get("lieu") == "maison"]
     ext = [r for r in recharges if r.get("lieu") == "exterieur"]
     kwh_m = sum(r.get("kwh", 0) for r in maison)
     kwh_hc = sum(r.get("kwh_hc", 0) for r in maison)
     kwh_e = sum(r.get("kwh", 0) for r in ext)
-    cout_e = sum(r.get("cout_eur", 0) for r in ext)
+    cout_e = sum(r.get("cout_eur") or 0 for r in ext)
 
     # Abonnement : indicateur a part, JAMAIS inclus dans le cout des recharges
     # ni le prix/kWh. Il couvre toute la periode choisie (le mois entier quand
@@ -73,7 +73,7 @@ def chiffres_de_la_periode(toutes: list[dict], periode: str) -> dict:
         "cout": total_cout,
         "prix_moyen": total_cout / total_kwh if total_kwh else 0,
         "maison": {"n": len(maison), "kwh": kwh_m,
-                   "cout": sum(r.get("cout_eur", 0) for r in maison),
+                   "cout": sum(r.get("cout_eur") or 0 for r in maison),
                    "pct_hc": 100 * kwh_hc / kwh_m if kwh_m else 0,
                    "abonnement": abonnement,
                    "part_voiture": part_voiture},

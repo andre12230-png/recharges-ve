@@ -117,7 +117,9 @@ def test_avertissements_de_la_grille_accentues():
                       + r._avertissements_grille(chevauche)
                       + r._avertissements_grille(troue))
     assert "Donnez une date de fin à « A »" in textes
-    assert "le tarif appliqué serait imprévisible" in textes
+    # Depuis le 26/10/2026, la periode la plus recente l'emporte : le
+    # message dit laquelle au lieu de « imprévisible ».
+    assert "le plus récent, qui s'applique" in textes
     assert "seront refusées" in textes
 
 

@@ -38,7 +38,7 @@ def par_mois(recharges: list[dict]) -> tuple[list[str], list[float],
     for r in recharges:
         m = r.get("date", "")[:7]
         kwh[m] += r.get("kwh", 0)
-        cout[m] += r.get("cout_eur", 0)
+        cout[m] += r.get("cout_eur") or 0
     mois = mois_continus(sorted(kwh))
     return mois, [kwh[m] for m in mois], [cout[m] for m in mois]
 
@@ -83,7 +83,7 @@ def ecart_wallbox(recharges: list[dict]) -> dict | None:
     wallbox = sum(r["cout_wallbox"] for r in chiffrees)
     if not wallbox:
         return None
-    reel = sum(r.get("cout_eur", 0) for r in chiffrees)
+    reel = sum(r.get("cout_eur") or 0 for r in chiffrees)
     return {"wallbox": wallbox, "reel": reel, "ecart": reel - wallbox,
             "n": len(chiffrees)}
 

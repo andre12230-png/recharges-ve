@@ -42,12 +42,12 @@ def lignes_detail(recharges: list[dict]) -> list[list[str]]:
     for r in sorted(recharges, key=lambda x: x.get("date", "")):
         maison = r.get("lieu") == "maison"
         kwh = r.get("kwh", 0)
-        prix = r.get("prix_kwh") or (r.get("cout_eur", 0) / kwh if kwh else 0)
+        prix = r.get("prix_kwh") or ((r.get("cout_eur") or 0) / kwh if kwh else 0)
         lignes.append([
             _fmt_date(r.get("date", "")),
             "Maison" if maison else "Extérieur",
             _fr(kwh),
-            _fr(r.get("cout_eur", 0)),
+            _fr(r.get("cout_eur") or 0),
             _fr(prix, 4),
             (r.get("tarif_nom") if maison else r.get("operateur")) or "",
         ])
@@ -67,14 +67,14 @@ def _stats(recharges: list[dict]) -> dict:
         a = par_tarif[r.get("tarif_nom", "?")]
         a["n"] += 1
         a["kwh"] += r.get("kwh", 0)
-        a["cout"] += r.get("cout_eur", 0)
+        a["cout"] += r.get("cout_eur") or 0
 
     par_op: dict[str, dict] = defaultdict(lambda: {"n": 0, "kwh": 0.0, "cout": 0.0})
     for r in ext:
         a = par_op[r.get("operateur") or "Inconnu"]
         a["n"] += 1
         a["kwh"] += r.get("kwh", 0)
-        a["cout"] += r.get("cout_eur", 0)
+        a["cout"] += r.get("cout_eur") or 0
 
     return {
         "n": len(recharges),
@@ -134,7 +134,7 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
             _date_excel(r.get("date", "")),
             "Maison" if r.get("lieu") == "maison" else "Extérieur",
             round(r.get("kwh", 0), 3),
-            round(r.get("cout_eur", 0), 2),
+            round(r.get("cout_eur") or 0, 2),
             round(r.get("prix_kwh", 0), 4),
             tarif_op or "",
             r.get("carte", ""),
