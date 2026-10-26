@@ -1221,7 +1221,7 @@ def valider_tarif(tarif: dict) -> dict:
     try:
         debut = datetime.fromisoformat(propre["debut"]).date()
     except Exception:
-        raise ValueError("La date de début est obligatoire et doit etre valide.")
+        raise ValueError("La date de début est obligatoire et doit être valide.")
     fin = None
     if propre.get("fin"):
         try:
@@ -1234,11 +1234,11 @@ def valider_tarif(tarif: dict) -> dict:
 
     if _montant_tarif(propre.get("abonnement_mensuel", 0),
                       "L'abonnement mensuel") < 0:
-        raise ValueError("L'abonnement mensuel ne peut pas etre negatif.")
+        raise ValueError("L'abonnement mensuel ne peut pas être négatif.")
 
     if propre.get("type") == "simple":
         if _montant_tarif(propre.get("prix_kwh", 0), "Le prix du kWh") <= 0:
-            raise ValueError("Le prix du kWh doit etre superieur a zero.")
+            raise ValueError("Le prix du kWh doit être supérieur à zéro.")
         for cle in ("prix_hp", "prix_hc", "plages_hc"):
             propre.pop(cle, None)
     elif propre.get("type") == "hp_hc":
@@ -1247,7 +1247,7 @@ def valider_tarif(tarif: dict) -> dict:
             if _montant_tarif(propre.get(cle, 0),
                               f"Le prix en {libelle}") <= 0:
                 raise ValueError(
-                    f"Le prix en {libelle} doit etre superieur a zero.")
+                    f"Le prix en {libelle} doit être supérieur à zéro.")
         plages = []
         for paire in propre.get("plages_hc") or []:
             if len(paire) != 2:
@@ -1277,7 +1277,7 @@ def valider_tarif(tarif: dict) -> dict:
             raise ValueError(
                 f"Vos plages d'heures creuses se chevauchent entre "
                 f"{recouvrement[0]} et {recouvrement[1]} : cette heure serait "
-                "comptee deux fois. Corrigez les plages.")
+                "comptée deux fois. Corrigez les plages.")
         propre["plages_hc"] = plages
         propre.pop("prix_kwh", None)
     else:
