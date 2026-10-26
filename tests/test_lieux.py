@@ -52,7 +52,7 @@ class BaseLieux(unittest.TestCase):
         Indispensable pour les cas d'avant : depuis que lieu_canonique()
         s'applique a l'enregistrement, on ne PEUT plus creer deux
         orthographes d'un meme lieu par le formulaire. Elles n'existent que
-        dans les fichiers deja constitues — comme celui d'André, ou
+        dans les fichiers deja constitues — comme celui de l'auteur, ou
         « Tilleuls (A7) » et « Tilleuls - Aire des Tilleuls (A7) » cohabitent.
         """
         data = r.charger_donnees(pour_modification=True)

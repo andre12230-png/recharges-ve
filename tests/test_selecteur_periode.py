@@ -54,7 +54,7 @@ class TestPeriodeDOuverture(unittest.TestCase):
     def test_les_statistiques_ouvrent_sur_l_annee(self):
         """Leur graphique s'intitule « énergie & coût par mois » : réduit à
         un seul mois, il n'affiche qu'une barre qui ne se compare à rien.
-        Demande d'André du 19/09/2026, en lisant son écran de septembre."""
+        Demande de l'auteur du 19/09/2026, en lisant son écran de septembre."""
         source = (Path(__file__).resolve().parent.parent / "fenetre.py"
                   ).read_text(encoding="utf-8")
         self.assertIn("self.filtre_periode_stats: str = annee_en_cours()",

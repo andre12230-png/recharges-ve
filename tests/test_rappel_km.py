@@ -80,7 +80,7 @@ class TestQuandIlSeTait(BaseRappel):
 
     def test_aucune_recharge_depuis_le_dernier_releve(self):
         """Sans recharge a rattacher, l'oubli ne fausse rien : c'est le cas
-        d'André le 19/09/2026 — dernier releve il y a 5 jours, rien depuis."""
+        de l'auteur le 19/09/2026 — dernier releve il y a 5 jours, rien depuis."""
         self.poser(releves_il_y_a=[200, 90], recharges_il_y_a=[300, 120])
         self.assertIsNone(self.rappel())
 

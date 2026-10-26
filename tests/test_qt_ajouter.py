@@ -22,7 +22,7 @@ import formulaire
 from pages import ajouter
 from theme_qt import ROUGE, VERT
 
-LIEUX = ["Aire de Lançon (A7)", "Supermarché du village"]
+LIEUX = ["Aire de l'Exemple (A0)", "Supermarché du village"]
 
 
 class FausseFenetre(QWidget):
@@ -245,11 +245,11 @@ def test_enregistrement_exterieur(page, moteur):
     e = page.exterieur
     remplir(e, champ_e_date_jour="24/09/2026", champ_e_date_heure="14h05",
             champ_e_kwh="30", champ_e_prix="0,60",
-            champ_e_lieu="  Aire de Lançon (A7) ", champ_e_carte="Direct (CB)")
+            champ_e_lieu="  Aire de l'Exemple (A0) ", champ_e_carte="Direct (CB)")
     e.bouton.click()
     assert moteur["exterieur"] == [{
         "kwh": 30.0, "cout": 18.0, "operateur": "Ionity",
-        "lieu_detail": "Aire de Lançon (A7)", "date": "2026-09-24T14:05",
+        "lieu_detail": "Aire de l'Exemple (A0)", "date": "2026-09-24T14:05",
         "carte": "Direct (CB)"}]
     assert e.resultat.text() == "OK : 18,00\xa0€  (0,6000\xa0€/kWh)"
     # Chiffres et lieu vides ; operateur et carte gardes.

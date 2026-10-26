@@ -217,7 +217,7 @@ def construire(fenetre) -> QWidget:
     # La sauvegarde externe (28/09/2026), elle, est en orange d'alerte, comme
     # dans Pecule et le Photovoltaique (29/09/2026) : des donnees sans copie
     # hors de l'ordinateur peuvent etre perdues. Placee juste avant
-    # « Dernieres recharges » (17/10/2026, demande d'Andre) pour laisser les
+    # « Dernieres recharges » (17/10/2026, demande de l'auteur) pour laisser les
     # chiffres de la periode en tete de page.
     rappel = rappel_de_sauvegarde(toutes, charger_config())
     if rappel:

@@ -104,7 +104,7 @@ def test_le_rappel_est_un_bandeau_d_alerte_orange(qapp, monkeypatch):
 def test_le_rappel_est_juste_avant_dernieres_recharges(qapp, monkeypatch):
     """17/10/2026 : le bandeau de sauvegarde quitte le haut de la page pour
     se placer juste avant la carte « Dernières recharges » (demande
-    d'Andre) : les chiffres de la periode restent en tete."""
+    de l'auteur) : les chiffres de la periode restent en tete."""
     import fenetre as module_fenetre
     from PySide6.QtWidgets import QLabel
     monkeypatch.setattr(module_fenetre, "charger_donnees",

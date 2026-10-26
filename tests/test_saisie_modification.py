@@ -63,7 +63,7 @@ def test_date_videe_reste_inchangee():
 
 
 def test_fin_videe_est_effacee():
-    """15/10/2026 (decision d'André) : la fin est pre-remplie ; vider ses
+    """15/10/2026 (decision de l'auteur) : la fin est pre-remplie ; vider ses
     deux cases est un geste voulu, qui retire l'heure de fin. Avant, il
     etait ignore sans un mot. None = « a retirer » pour modifier_recharge."""
     assert maison(fin_jour="", fin_heure="")["fin"] is None

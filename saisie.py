@@ -479,7 +479,7 @@ def lire_modification_recharge(recharge: dict, textes: dict[str, str], *,
     Les deux cases du debut laissees vides veulent dire « inchange » : la
     date d'origine est gardee. Celles de la fin, pre-remplies, videes
     toutes les deux : l'heure de fin est retiree (« fin » vaut None), comme
-    une recharge saisie sans fin (decision d'André du 15/10/2026 ; avant,
+    une recharge saisie sans fin (decision de l'auteur du 15/10/2026 ; avant,
     ce geste etait ignore sans un mot).
     """
     maison = recharge.get("lieu") == "maison"
