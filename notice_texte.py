@@ -370,7 +370,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "« ⚙️ Paramètres », dont le bouton « Ouvrir le dossier » l'affiche "
          "dans l'Explorateur. Vos recharges sont "
          "dans recharges.json, la grille tarifaire dans tarifs.json. "
-         "L'application ne s'ouvre qu'une fois à la fois : deux fenêtres "
+         "Si une erreur imprévue survient, elle est notée, datée, dans "
+         "erreurs.log, au même endroit : joignez-le si vous signalez un "
+         "problème. L'application ne s'ouvre qu'une fois à la fois : deux fenêtres "
          "sur les mêmes données effaceraient l'une les saisies de l'autre."),
         ("Sauvegardes automatiques",
          "Une copie est faite avant chaque écriture, dans le sous-dossier "

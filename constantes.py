@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Recharges VE"
-APP_VERSION = "v2.2.24"
+APP_VERSION = "v2.2.25"
 
 # Saisie depuis le telephone : reservee a la version privee (decision du
 # 24/10/2026). L'exe public est construit sans telephone.py (option

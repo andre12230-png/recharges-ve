@@ -49,9 +49,10 @@ from temps_reel import apres_duree, secondes_reelles as _secondes_reelles
 #    et simplement d'ecrire — et l'application ne pouvait plus rien
 #    enregistrer.
 #
-# En développement (.py) : le sous-dossier dist/ à côté du script, pour
-# travailler sur EXACTEMENT les mêmes données que l'application livrée et
-# éviter toute divergence entre les deux emplacements.
+# En développement (.py) : le sous-dossier dist/ à côté du script. Ce n'est
+# plus le dossier des vraies données, qui vivent dans un dossier d'usage à
+# part ; ses vieilles copies sont parties à la Corbeille le 27/10/2026.
+# Pour essayer les sources sur une copie : RECHARGES_DATA_DIR (cas 1).
 DOSSIER_APP = "Recharges VE"
 
 
