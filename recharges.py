@@ -21,6 +21,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import journal_erreurs
 from erreurs import erreur_en_clair
 from formats import fmt_kwh, fmt_nb_recharges, fmt_nombre
 # Vieilles sauvegardes de backups/ a la Corbeille (decision du 26/10/2026).
@@ -94,6 +95,14 @@ def dossier_donnees() -> Path:
     ne verrait pas une redirection faite ensuite.
     """
     return BASE
+
+
+def signaler(message: str) -> None:
+    """Dit un incident : à la console (en développement) et dans
+    erreurs.log du dossier des données, seule trace dans l'exe, qui n'a pas
+    de console (audits du 26/10/2026, #22)."""
+    print(message)
+    journal_erreurs.ecrire(BASE, message)
 
 
 def rediriger_donnees(dossier: str | Path) -> None:
@@ -236,7 +245,7 @@ def _mettre_de_cote(chemin: Path,
         shutil.copy2(chemin, dest)
         return dest
     except OSError as e:
-        print(f"[données] impossible de mettre le fichier de cote : {e}")
+        signaler(f"[données] impossible de mettre le fichier de cote : {e}")
         return None
 
 
@@ -336,7 +345,7 @@ def _lire_donnees_du_disque() -> dict:
         # jusqu'à la v2.0.0 : ni réparation, ni page Restaurer.
         backup = _backup_le_plus_recent()
         if backup:
-            print(f"[données] recharges.json illisible ({e}), "
+            signaler(f"[données] recharges.json illisible ({e}), "
                   f"restauration depuis {backup.name}")
             with backup.open("r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -385,7 +394,7 @@ def _creer_backup(fichier: Path | None = None,
     # Un fichier illisible ne doit JAMAIS entrer dans backups/ : il occuperait
     # une des 15 places de la rotation et chasserait une sauvegarde saine.
     if not _fichier_lisible(fichier, prefixe):
-        print(f"[backup] {fichier.name} est illisible : aucune copie n'est "
+        signaler(f"[backup] {fichier.name} est illisible : aucune copie n'est "
               "faite dans backups/ (les sauvegardes saines sont preservees)")
         return
     try:
@@ -419,7 +428,7 @@ def _creer_backup(fichier: Path | None = None,
         for vieux in quotidiens[:-MAX_BACKUPS_QUOTIDIENS]:
             _retirer_sauvegarde(vieux)
     except OSError as e:
-        print(f"[backup] impossible : {e}")
+        signaler(f"[backup] impossible : {e}")
         # L'écriture qui suit aura lieu quand même (refuser d'enregistrer
         # une saisie serait pire), mais l'utilisateur doit savoir qu'elle
         # se fait sans copie de secours.
@@ -695,9 +704,9 @@ def _reparer_tarifs(erreur: Exception) -> dict | None:
         shutil.copy2(copie, TARIFS_FILE)
         contenu = json.loads(TARIFS_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"[tarifs] réparation impossible : {e}")
+        signaler(f"[tarifs] réparation impossible : {e}")
         return None
-    print(f"[tarifs] tarifs.json illisible ({erreur}), "
+    signaler(f"[tarifs] tarifs.json illisible ({erreur}), "
           f"restauration depuis {copie.name}")
     INCIDENT_TARIFS = {
         "cause": "illisible",
@@ -1425,7 +1434,7 @@ def _ecrire_tarifs(contenu: dict) -> None:
     try:
         shutil.copy2(TARIFS_FILE, TARIFS_FILE.with_suffix(".json.avant"))
     except OSError as e:
-        print(f"[tarifs] copie de securite impossible : {e}")
+        signaler(f"[tarifs] copie de securite impossible : {e}")
     _creer_backup(TARIFS_FILE, "tarifs")
     fd, tmp = tempfile.mkstemp(dir=str(TARIFS_FILE.parent), suffix=".tmp")
     try:
@@ -1466,14 +1475,50 @@ def depot_git_des_donnees() -> Path | None:
     return None
 
 
+def _chemin_git() -> str | None:
+    """Le chemin complet de git, cherché dans les seuls dossiers ABSOLUS du
+    PATH ; None s'il n'y est pas.
+
+    Lancer « git » sans chemin laissait Windows le chercher aussi dans le
+    dossier courant : un git.exe posé là aurait été exécuté (audits du
+    26/10/2026, #27). shutil.which ne convient pas : sous Windows, il
+    regarde lui aussi le dossier courant en premier."""
+    noms = ("git.exe",) if sys.platform == "win32" else ("git",)
+    for dossier in os.environ.get("PATH", "").split(os.pathsep):
+        dossier = dossier.strip().strip('"')
+        if not dossier or not os.path.isabs(dossier):
+            continue
+        for nom in noms:
+            candidat = Path(dossier) / nom
+            if candidat.is_file():
+                return str(candidat)
+    return None
+
+
+def _lancer_git(args: list[str], repo: Path, timeout: int = 15,
+                **options) -> subprocess.CompletedProcess:
+    """Lance git dans le dépôt, par son chemin complet, sans fenêtre.
+
+    GIT_TERMINAL_PROMPT=0 : une demande d'identifiants dans une console,
+    que l'exe n'a pas, faisait attendre jusqu'au délai maximal (#27). La
+    fenêtre de connexion de Git Credential Manager, elle, reste possible :
+    c'est elle qui permet de se reconnecter à GitHub.
+    Lève FileNotFoundError si git est introuvable."""
+    git = _chemin_git()
+    if git is None:
+        raise FileNotFoundError("git")
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+    return subprocess.run(
+        [git, *args], cwd=str(repo), capture_output=True, timeout=timeout,
+        env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        **options)
+
+
 def _suivi_par_git(fichier: Path, repo: Path) -> bool:
     """Vrai si git suit ce fichier dans ce dépôt (faux en cas de doute)."""
     try:
-        r = subprocess.run(
-            ["git", "ls-files", "--error-unmatch", "--",
-             _chemin_pour_git(fichier, repo)],
-            cwd=str(repo), capture_output=True, timeout=15,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        r = _lancer_git(["ls-files", "--error-unmatch", "--",
+                         _chemin_pour_git(fichier, repo)], repo)
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return False
     return r.returncode == 0
@@ -1508,14 +1553,9 @@ def synchroniser_github() -> tuple[bool, str]:
     except ValueError:
         return False, ("Le dossier des données n'est pas dans le dépôt git : "
                        "sauvegarde cloud impossible.")
-    # Évite l'apparition d'une fenêtre de console noire quand on est en .exe
-    sans_fenetre = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-
     def git(*args, timeout=15):
-        return subprocess.run(
-            ["git", *args], cwd=str(repo), capture_output=True,
-            text=True, encoding="utf-8", errors="replace",
-            timeout=timeout, creationflags=sans_fenetre)
+        return _lancer_git(list(args), repo, timeout=timeout, text=True,
+                           encoding="utf-8", errors="replace")
 
     try:
         if not (repo / ".git").exists():
@@ -3452,6 +3492,13 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         if ignorer_zero and kwh == 0:
             zero_kwh += 1
             continue
+        # Une énergie négative n'existe pas : c'est une ligne fausse (colonne
+        # mal lue, fichier retouché). Elle était rangée sans un mot parmi
+        # les branchements écartés ; elle compte maintenant comme non
+        # reconnue, annoncée en orange (audits du 26/10/2026, #20).
+        if kwh < 0:
+            non_reconnues += 1
+            continue
 
         # L'heure telle que la borne l'a écrite, avant correction : c'est
         # elle qui reconnaît la même ligne d'un import à l'autre.
@@ -3728,7 +3775,7 @@ def enregistrer_reglages_borne(reglages: dict) -> dict:
             try:
                 sauvegarder_donnees(avant)
             except Exception as e:
-                print(f"[réglages] remise en état impossible : {e}")
+                signaler(f"[réglages] remise en état impossible : {e}")
         raise
     return {"decalees": decalees, "recalculees": recalculees,
             "laissees": laissees}

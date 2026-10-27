@@ -150,7 +150,7 @@ def test_fichier_illisible_au_demarrage(dossier, qapp):
 
 def _recopies_brutes(fichier: Path) -> list[int]:
     """Lignes ou une erreur est recopiee telle quelle — f"{e}",
-    f"{e or ...}" ou str(e) — ailleurs que dans un print().
+    f"{e or ...}" ou str(e) — ailleurs que dans un print() ou signaler().
 
     Meme methode que le Photovoltaique : on lit la structure du code (ast)
     plutot que son texte, pour ne pas se laisser tromper par un commentaire.
@@ -160,10 +160,16 @@ def _recopies_brutes(fichier: Path) -> list[int]:
     noms = {"e", "exc", "err"}
     noms.update(n.name for n in ast.walk(arbre)
                 if isinstance(n, ast.ExceptHandler) and n.name)
+    # print() et signaler() (console + erreurs.log, depuis les audits du
+    # 26/10/2026) ecrivent pour le depannage, jamais a l'ecran.
     dans_print = set()
     for noeud in ast.walk(arbre):
-        if (isinstance(noeud, ast.Call) and isinstance(noeud.func, ast.Name)
-                and noeud.func.id == "print"):
+        if not isinstance(noeud, ast.Call):
+            continue
+        nom = (noeud.func.id if isinstance(noeud.func, ast.Name) else
+               noeud.func.attr if isinstance(noeud.func, ast.Attribute)
+               else "")
+        if nom in ("print", "signaler"):
             dans_print.update(id(n) for n in ast.walk(noeud))
 
     def nomme_une_erreur(noeud) -> bool:

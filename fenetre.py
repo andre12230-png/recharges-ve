@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import queue
+import shutil
 import sys
 import tempfile
 import threading
@@ -73,7 +74,7 @@ class FenetrePrincipale(QMainWindow):
                 print(f"[migration] {n} recharges ont reçu un id")
         except Exception as e:
             self._erreur_chargement = erreur_en_clair(e)
-            print(f"[migration] erreur : {e}")
+            recharges.signaler(f"[migration] erreur : {e}")
 
         self.vue_courante: str | None = None
         self._derniere_erreur: str = ""   # renseigne par _afficher_erreur
@@ -437,7 +438,7 @@ class FenetrePrincipale(QMainWindow):
         try:
             self._maj_bilan()
         except Exception as e:
-            print(f"[bilan] {e}")
+            recharges.signaler(f"[bilan] {e}")
         # Apres une saisie, la page est reaffichee : c'est le moment de dire
         # si l'enregistrement s'est fait sans copie de secours.
         if recharges.ECHEC_BACKUP:
@@ -935,6 +936,7 @@ def autotest(chemin_rapport: str) -> int:
     from export import exporter_excel, exporter_pdf
 
     lignes = []
+    demo = None
     if "--donnees-reelles" in sys.argv:
         lignes.append("données        : les vôtres")
     else:
@@ -961,19 +963,24 @@ def autotest(chemin_rapport: str) -> int:
         soucis += bool(souci)
         lignes.append(f"vue {vue:<11} : {souci or 'OK'}")
 
-    dossier = Path(tempfile.mkdtemp(prefix="autotest_"))
-    echantillon = charger_donnees()["recharges"][:30]
-    for nom, fonction, extension in (("export Excel", exporter_excel, ".xlsx"),
-                                     ("export PDF", exporter_pdf, ".pdf")):
-        try:
-            cible = fonction(echantillon, dossier / f"test{extension}",
-                             "autotest")
-            lignes.append(f"{nom:<15}: OK ({Path(cible).stat().st_size} "
-                          "octets)")
-        except Exception as e:
-            soucis += 1
-            detail = traceback.format_exception_only(e)[-1].strip()
-            lignes.append(f"{nom:<15}: {detail}")
+    # Les exports d'essai vont dans un dossier temporaire effacé aussitôt :
+    # avec --donnees-reelles, ce sont 30 vraies recharges, qui restaient
+    # dans %TEMP% sans que personne le sache (audits du 26/10/2026, #23).
+    with tempfile.TemporaryDirectory(prefix="autotest_") as temporaire:
+        dossier = Path(temporaire)
+        echantillon = charger_donnees()["recharges"][:30]
+        for nom, fonction, extension in (
+                ("export Excel", exporter_excel, ".xlsx"),
+                ("export PDF", exporter_pdf, ".pdf")):
+            try:
+                cible = fonction(echantillon, dossier / f"test{extension}",
+                                 "autotest")
+                lignes.append(f"{nom:<15}: OK ({Path(cible).stat().st_size} "
+                              "octets)")
+            except Exception as e:
+                soucis += 1
+                detail = traceback.format_exception_only(e)[-1].strip()
+                lignes.append(f"{nom:<15}: {detail}")
 
     # Les fichiers livres a cote du programme : sans eux, l'icone ou la
     # fleche des listes manquent sans aucune erreur.
@@ -999,6 +1006,10 @@ def autotest(chemin_rapport: str) -> int:
                                     encoding="utf-8")
     fenetre.hide()
     fenetre.deleteLater()
+    # Le jeu de démonstration n'a servi qu'à cet essai : on l'efface (#23).
+    # Jamais le dossier de vraies données, qui n'est pas créé ici.
+    if demo is not None:
+        shutil.rmtree(demo, ignore_errors=True)
     return 1 if soucis else 0
 
 
@@ -1026,9 +1037,38 @@ def verrou_instance_unique(dossier: Path) -> QLockFile | None:
     return verrou if verrou.tryLock(0) else None
 
 
+def erreur_imprevue(type_erreur, erreur, trace) -> None:
+    """Une erreur que rien n'a prévue : notée dans erreurs.log, puis dite à
+    l'écran. Avant les audits du 26/10/2026 (#26), elle s'écrivait dans une
+    console que l'exe n'a pas : le bouton semblait ne rien faire."""
+    if issubclass(type_erreur, KeyboardInterrupt):
+        sys.__excepthook__(type_erreur, erreur, trace)
+        return
+    detail = "".join(traceback.format_exception(type_erreur, erreur, trace))
+    recharges.signaler(f"[imprévue] {detail}")
+    journal = recharges.dossier_donnees() / "erreurs.log"
+    try:
+        QMessageBox.warning(
+            None, APP_NAME,
+            "Une erreur imprévue est survenue : "
+            f"{erreur_en_clair(erreur)}\n\n"
+            "Les recharges déjà enregistrées ne sont pas touchées. Le détail "
+            f"est noté dans :\n{journal}")
+    except Exception:
+        # Sans fenêtre possible, le journal suffit : surtout ne pas
+        # relancer une erreur depuis le gestionnaire d'erreurs.
+        pass
+
+
+def installer_journal_erreurs() -> None:
+    """Fait passer toute erreur imprévue par erreur_imprevue (#26)."""
+    sys.excepthook = erreur_imprevue
+
+
 def main() -> int:
     if "--autotest" in sys.argv:
         return autotest(sys.argv[sys.argv.index("--autotest") + 1])
+    installer_journal_erreurs()
     _identifiant_windows()
     # Deja creee si la question Clair / Sombre du premier lancement a ete
     # posee (premier_theme.py) : on la reprend, Qt n'en accepte qu'une.
