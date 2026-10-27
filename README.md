@@ -10,6 +10,9 @@ heures creuses comprises, et sur les bornes publiques, avec le coût aux
 
 Page de présentation : **[andre12230-png.github.io/recharges-ve](https://andre12230-png.github.io/recharges-ve/)**
 
+[![Vidéo de présentation de Recharges VE (1 min 07) — cliquez pour la lancer](docs/media/video-apercu.jpg)](https://andre12230-png.github.io/recharges-ve/#video)
+*▶ Vidéo de présentation (1 min 07), sur la page de présentation. Réalisée avec des données d'exemple.*
+
 ## Installer l'application
 
 Pas besoin d'être informaticien, ni d'installer Python :
