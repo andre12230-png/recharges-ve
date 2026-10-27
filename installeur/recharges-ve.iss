@@ -86,11 +86,13 @@ Type: filesandordirs; Name: "{app}\_internal"
 Name: "{localappdata}\Recharges VE"; Flags: uninsneveruninstall
 
 [Files]
-; Le dossier construit par PyInstaller (Recharges-VE.exe + _internal\). Par
-; sécurité, une donnée personnelle oubliée à sa racine n'est JAMAIS livrée
-; (le « \ » en tête limite chaque motif à la racine du dossier : les .csv
-; d'exemple de matplotlib, dans _internal, ne sont pas concernés).
-Source: "{#Construit}\*"; DestDir: "{app}"; Excludes: "\recharges.json,\tarifs.json,\tarifs.json.avant,\backups,\*.csv"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Le dossier construit par PyInstaller : on ne prend QUE ce qui est nommé,
+; le programme et son moteur _internal\. Tout autre fichier posé à la racine
+; (une donnée personnelle, un export Excel) reste dehors, même avec un nom
+; imprévu : avant les audits du 26/10/2026 (A10), l'installeur prenait tout
+; sauf une liste d'exclusions, qu'un nom nouveau aurait traversée.
+Source: "{#Construit}\Recharges-VE.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Construit}\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#Racine}LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Icons]

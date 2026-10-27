@@ -3436,6 +3436,10 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
     ajoutes = 0
     doublons = 0
     remplaces = 0
+    # Chaque saisie manuelle remplacée, avant et après : le compte rendu les
+    # montre, pour qu'une autre session de la borne ne puisse pas effacer
+    # une vraie saisie sans que personne le voie (audits du 26/10/2026, #5).
+    remplacements: list[dict] = []
     zero_kwh = 0
     parasites = 0
     completees = 0      # anciennes recharges qui reçoivent l'heure de borne
@@ -3516,6 +3520,12 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
             # Saisie manuelle de la même session : remplacée par les données
             # précises du CSV (heure corrigée, durée, coût wallbox). L'id
             # d'origine est conservé.
+            remplacements.append({
+                "avant_date": proche.get("date"),
+                "avant_kwh": proche.get("kwh"),
+                "apres_date": champs["date"],
+                "apres_kwh": champs["kwh"],
+            })
             proche.update(champs)
             remplaces += 1
         else:
@@ -3538,7 +3548,8 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
     if ajoutes or remplaces or completees:
         sauvegarder_donnees(data)
     return {"total_lus": len(records), "ajoutes": ajoutes, "doublons": doublons,
-            "remplaces": remplaces, "zero_kwh": zero_kwh,
+            "remplaces": remplaces, "remplacements": remplacements,
+            "zero_kwh": zero_kwh,
             "parasites": parasites, "non_reconnues": non_reconnues}
 
 

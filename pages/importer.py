@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel,
 
 from composants import carte, paragraphe, texte_a_lire, texte_fixe
 from erreurs import erreur_en_clair
+from formats import fmt_date_fr, fmt_kwh
 from recharges import (FormatCsvInconnu, apercu_csv, dossier_donnees,
                        importer_csv_maison, retenir_correspondance)
 from theme_qt import ALERTE_TEXTE, VERT
@@ -30,6 +31,19 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
     texte += f", {res['total_lus']} lues"
     if not res["ajoutes"] and not res["remplaces"]:
         texte += "   (rien de nouveau : le fichier n'a pas été modifié)"
+    # Les saisies manuelles remplacées, une par ligne : la règle (moins de
+    # 2 h d'écart, même énergie) peut prendre une AUTRE session de la borne
+    # pour la même ; l'utilisateur doit pouvoir le vérifier (audits du
+    # 26/10/2026, #5).
+    remplacements = res.get("remplacements") or []
+    if remplacements:
+        texte += ("\nSaisies à la main remplacées par une session de la "
+                  "borne (à vérifier) :")
+        for rp in remplacements:
+            texte += (f"\n  • {fmt_date_fr(rp['avant_date'])}, "
+                      f"{fmt_kwh(rp['avant_kwh'])} → "
+                      f"{fmt_date_fr(rp['apres_date'])}, "
+                      f"{fmt_kwh(rp['apres_kwh'])}")
     alerte = bool(res.get("non_reconnues"))
     if alerte:
         # Accorde avec le nombre (29/09/2026 ; c'etait « ligne(s) »)
