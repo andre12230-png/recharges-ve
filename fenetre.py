@@ -636,7 +636,7 @@ class FenetrePrincipale(QMainWindow):
                 constat = (
                     "Le fichier de vos recharges était illisible au démarrage "
                     "(coupure de courant pendant une sauvegarde, disque "
-                    "plein...).\n\n")
+                    "plein…).\n\n")
             texte = (
                 constat +
                 f"Il a été remplacé par la sauvegarde du {quand}, "
@@ -776,7 +776,7 @@ class FenetrePrincipale(QMainWindow):
                     self, "Sauvegarde GitHub",
                     f"{msg}\n\nVos données restent enregistrées sur ce PC.")
 
-        self._lancer_sync_github("Sauvegarde des données vers GitHub...", fini)
+        self._lancer_sync_github("Sauvegarde des données vers GitHub…", fini)
 
     def _lancer_sync_github(self, texte_attente: str, quand_fini) -> None:
         """Envoie les donnees vers GitHub dans un fil d'execution separe.

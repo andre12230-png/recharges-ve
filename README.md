@@ -127,7 +127,7 @@ divergents.
 | **Historique** | Toutes les recharges dans un seul tableau qui défile : on choisit une ligne, puis **Modifier…** ou **Supprimer** (ou double-clic, Entrée, Suppr, clic droit). Filtres par lieu et par période, **recherche** pendant la frappe (opérateur, lieu, tarif, date, montant) et **tri en cliquant sur un titre de colonne**. Une ligne résume la sélection. |
 | **Statistiques** | Graphique énergie et coût par mois, répartition par tarif et par opérateur, écart avec le coût annoncé par la wallbox. |
 | **Kilométrage** | Relevés du compteur, consommation et coût au 100 km, et estimation de la **part d'énergie non enregistrée** (recharges chez des proches, bornes gratuites). Une phrase renvoie à la page « Essence ou électrique ? » pour la comparaison avec une voiture essence. |
-| **⛽ Essence ou électrique ?** | La comparaison avec une voiture essence, sur « Tout » (avec le détail année par année) ou sur une année, à partir des kilomètres entre vos relevés du compteur : ce que l'essence vous aurait coûté, ce que vous avez payé en électricité, l'économie. Un bouton mène aux Paramètres pour changer la voiture de comparaison ou le prix du litre. |
+| **⛽ Essence ou électrique ?** | La comparaison avec une voiture essence, sur « Toute la période » (avec le détail année par année) ou sur une année, à partir des kilomètres entre vos relevés du compteur : ce que l'essence vous aurait coûté, ce que vous avez payé en électricité, l'économie. Un bouton mène aux Paramètres pour changer la voiture de comparaison ou le prix du litre. |
 | **Exporter** | Excel (tableau détaillé + synthèse) ou PDF (rapport imprimable), sur la sélection de votre choix. |
 | **Restaurer** | Liste les sauvegardes disponibles avec leur date et leur nombre de recharges, et permet d'en remettre une en service. L'état actuel est mis de côté au passage : une restauration faite par erreur s'annule en restaurant la sauvegarde la plus récente. |
 | **Tarifs** | Grille tarifaire : **modifier** une période, en **ajouter** une quand vos prix changent, la supprimer, et recalculer tous les coûts. Plus besoin d'éditer `tarifs.json` à la main. En bas de page, les **frais de vos cartes de recharge** (achat d'une carte, ou abonnement mensuel ou annuel à un réseau), comptés à part comme l'abonnement de la maison. |
@@ -176,13 +176,13 @@ Sur la page **Statistiques**, seule l'année se choisit (**‹ année ›**) : s
 graphique compare les mois d'une année entre eux. Le bouton y devient
 **Cette année**, et flèches comme raccourcis avancent d'une année.
 
-Le menu des années offre aussi deux raccourcis : **Tout** et **30 derniers
+Le menu des années offre aussi deux raccourcis : **Toute la période** et **30 derniers
 jours** ; le menu des mois est alors grisé, puisque ces deux-là ne se
 découpent pas en mois. « 30 derniers jours » compte 30 jours du calendrier,
 aujourd'hui compris, pour les recharges comme pour l'abonnement et les frais.
 
 **L'application s'ouvre toujours sur le mois en cours** (l'export, lui, part
-de « Tout »). Rien n'est mémorisé d'une utilisation sur l'autre : après avoir
+de « Toute la période »). Rien n'est mémorisé d'une utilisation sur l'autre : après avoir
 consulté un mois passé, le lancement suivant revient au mois courant, sans
 risque de prendre de vieux chiffres pour les chiffres du jour.
 
@@ -260,7 +260,7 @@ côté avant.
 Tout se modifie dans l'application, sans Bloc-notes : la grille tarifaire
 dans la page **Tarifs** (elle vérifie les saisies, ferme la période précédente
 quand vous en ajoutez une nouvelle, et propose de recalculer les coûts), et
-les trois réglages de la voiture et de la borne ci-dessous dans la page
+les quatre réglages de la voiture et de la borne ci-dessous dans la page
 **⚙️ Paramètres**, contrôlés avant d'être enregistrés.
 
 | Réglage | Rôle |

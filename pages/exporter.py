@@ -224,9 +224,9 @@ def exporter(fenetre, fmt: str, resultat: QLabel) -> None:
         dire(f"Erreur : {erreur_en_clair(e)}", False)
         return
     if fmt == "excel":
-        dire(f"OK : {fmt_nb_recharges(len(recharges))} "
+        dire(f"✓ {fmt_nb_recharges(len(recharges))} "
              f"{'exportées' if len(recharges) > 1 else 'exportée'} vers "
              f"{fichier.name}",
              True)
     else:
-        dire(f"OK : rapport PDF généré -> {fichier.name}", True)
+        dire(f"✓ Rapport PDF enregistré : {fichier.name}", True)

@@ -19,16 +19,28 @@ from recharges import (FormatCsvInconnu, apercu_csv, dossier_donnees,
 from theme_qt import ALERTE_TEXTE, VERT
 
 
+def _accord(n: int, singulier: str, pluriel: str) -> str:
+    """« 1 doublon », « 2 doublons » : 0 et 1 au singulier."""
+    return f"{n} {singulier if n <= 1 else pluriel}"
+
+
 def texte_resultat(res: dict) -> tuple[str, bool]:
     """Le compte rendu d'un import, et s'il faut alerter (lignes non
     reconnues, donc PAS enregistrees : l'alerte ne doit pas se noyer dans un
     message de succes)."""
-    texte = (f"OK : {res['ajoutes']} ajoutées, {res['remplaces']} saisies "
-             f"manuelles remplacées, {res['doublons']} doublons, "
-             f"{res['zero_kwh']} ignorées")
+    # Chaque nombre accorde son mot : « 1 doublon », « 2 doublons » (0 et 1
+    # au singulier). « ✓ » comme les autres succès de l'appli, et non
+    # « OK » (contrôle du français du 26/10/2026).
+    texte = ("✓ " + _accord(res["ajoutes"], "ajoutée", "ajoutées") + ", "
+             + _accord(res["remplaces"], "saisie manuelle remplacée",
+                       "saisies manuelles remplacées") + ", "
+             + _accord(res["doublons"], "doublon", "doublons") + ", "
+             + _accord(res["zero_kwh"], "ignorée", "ignorées"))
     if res.get("parasites"):
-        texte += f", {res['parasites']} branchements sans recharge écartés"
-    texte += f", {res['total_lus']} lues"
+        texte += ", " + _accord(res["parasites"],
+                                "branchement sans recharge écarté",
+                                "branchements sans recharge écartés")
+    texte += ", " + _accord(res["total_lus"], "lue", "lues")
     if not res["ajoutes"] and not res["remplaces"]:
         texte += "   (rien de nouveau : le fichier n'a pas été modifié)"
     # Les saisies manuelles remplacées, une par ligne : la règle (moins de

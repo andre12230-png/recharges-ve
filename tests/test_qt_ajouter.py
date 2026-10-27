@@ -173,7 +173,7 @@ def test_enregistrement_maison(page, moteur):
     m.bouton.click()
     assert moteur["maison"] == [(datetime(2026, 9, 24, 22, 30),
                                  datetime(2026, 9, 25, 4, 42), 20.5)]
-    assert m.resultat.text().startswith("OK : 15,00\xa0kWh HC + 5,00\xa0kWh HP")
+    assert m.resultat.text().startswith("✓ 15,00\xa0kWh HC + 5,00\xa0kWh HP")
     assert "(Mon contrat)" in m.resultat.text()
     assert VERT in m.resultat.styleSheet()
     # Formulaire remis a zero : un second clic ne cree pas de doublon.
@@ -251,7 +251,7 @@ def test_enregistrement_exterieur(page, moteur):
         "kwh": 30.0, "cout": 18.0, "operateur": "Ionity",
         "lieu_detail": "Aire de l'Exemple (A0)", "date": "2026-09-24T14:05",
         "carte": "Direct (CB)"}]
-    assert e.resultat.text() == "OK : 18,00\xa0€  (0,6000\xa0€/kWh)"
+    assert e.resultat.text() == "✓ 18,00\xa0€  (0,6000\xa0€/kWh)"
     # Chiffres et lieu vides ; operateur et carte gardes.
     assert e.texte("champ_e_kwh") == e.texte("champ_e_prix") == ""
     assert e.texte("champ_e_lieu") == ""

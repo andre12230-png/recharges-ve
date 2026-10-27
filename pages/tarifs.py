@@ -63,7 +63,13 @@ def ordre_d_affichage(tarifs: list[dict]) -> list[dict]:
 def question_suppression(t: dict, n_recharges: int) -> str:
     texte = (f"Supprimer la période « {t.get('nom')} » "
              f"({periode_du_tarif(t)}) ?")
-    if n_recharges:
+    # Accordé selon le nombre : « 1 recharges ont été calculées » (contrôle
+    # du français du 26/10/2026).
+    if n_recharges == 1:
+        texte += ("\n\nATTENTION : 1 recharge a été calculée avec ce tarif. "
+                  "Elle gardera son montant actuel, mais un recalcul la "
+                  "refusera faute de tarif pour sa date.")
+    elif n_recharges:
         texte += (f"\n\nATTENTION : {n_recharges} recharges ont été calculées "
                   "avec ce tarif. Elles garderont leur montant actuel, mais un "
                   "recalcul les refusera faute de tarif pour leur date.")

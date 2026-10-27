@@ -187,7 +187,7 @@ class PageHistorique(QWidget):
         ligne2.addWidget(libelle)
         self.recherche = QLineEdit(fenetre.recherche_historique)
         self.recherche.setPlaceholderText(
-            "opérateur, lieu, tarif, date, montant...")
+            "opérateur, lieu, tarif, date, montant…")
         # Le raccourci écrit au survol, comme sur le bouton « 🔎 Rechercher »
         # de Pécule : Ctrl+F veut dire « chercher » dans les deux applis.
         # La recherche porte sur la période et le lieu choisis (selection()).

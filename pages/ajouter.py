@@ -215,7 +215,7 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
     note, releve_pris = noter_le_compteur(lu["km"], r["date"])
     if lu["km"] is not None and releve_pris:
         f.vider("champ_m_km")
-    _resultat(f, f"OK : {fmt_kwh(r['kwh_hc'])} HC + {fmt_kwh(r['kwh_hp'])} HP"
+    _resultat(f, f"✓ {fmt_kwh(r['kwh_hc'])} HC + {fmt_kwh(r['kwh_hp'])} HP"
                  f" = {fmt_eur(r['cout_eur'])}  ({r['tarif_nom']}){note}",
               ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
@@ -256,7 +256,7 @@ def enregistrer_exterieur(fenetre, f: Formulaire) -> None:
     note, releve_pris = noter_le_compteur(lu["km"], r["date"])
     if lu["km"] is not None and releve_pris:
         f.vider("champ_e_km")
-    _resultat(f, f"OK : {fmt_eur(r['cout_eur'])}  "
+    _resultat(f, f"✓ {fmt_eur(r['cout_eur'])}  "
                  f"({fmt_prix_kwh(r['prix_kwh'])}){note}", ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     # Operateur et carte restent : on recharge souvent au meme reseau.

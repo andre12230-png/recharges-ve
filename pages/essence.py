@@ -64,7 +64,8 @@ def construire(fenetre) -> QWidget:
     elif periode != "Tout" and not re.fullmatch(r"\d{4}", periode):
         cadre, corps = carte("Comparaison avec une voiture essence")
         corps.addWidget(paragraphe(
-            "La comparaison se fait sur « Tout » ou sur une année : "
+            "La comparaison se fait sur « Toute la période » ou sur une "
+            "année : "
             "choisissez-en une ci-dessus.", "Discret"))
         colonne.addWidget(cadre)
     elif c is None:

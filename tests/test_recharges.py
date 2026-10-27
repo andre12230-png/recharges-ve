@@ -953,7 +953,7 @@ class TestJeuDemo(unittest.TestCase):
         lieux = {x["lieu"] for x in recharges}
         self.assertEqual(lieux, {"maison", "exterieur"})
         noms = {x["tarif_nom"] for x in recharges if x["lieu"] == "maison"}
-        self.assertEqual(noms, {"Demo Bleu", "Demo HP/HC"})   # les deux types
+        self.assertEqual(noms, {"Démo Bleu", "Démo HP/HC"})   # les deux types
         passent_minuit = [x for x in recharges
                           if x.get("fin") and x["fin"][:10] != x["date"][:10]]
         self.assertGreaterEqual(len(passent_minuit), 2)

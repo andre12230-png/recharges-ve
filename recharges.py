@@ -1545,7 +1545,7 @@ def synchroniser_github() -> tuple[bool, str]:
     """
     repo = depot_git_des_donnees()
     if repo is None:
-        return False, "Pas de dépôt git : sauvegarde cloud non configurée."
+        return False, "Pas de dépôt git : sauvegarde en ligne non configurée."
     # Les chemins sont calcules, non ecrits en dur : le dossier des donnees ne
     # s'appelle « dist » que chez celui qui construit l'application lui-meme.
     try:
@@ -1553,14 +1553,14 @@ def synchroniser_github() -> tuple[bool, str]:
                     _chemin_pour_git(TARIFS_FILE, repo)]
     except ValueError:
         return False, ("Le dossier des données n'est pas dans le dépôt git : "
-                       "sauvegarde cloud impossible.")
+                       "sauvegarde en ligne impossible.")
     def git(*args, timeout=15):
         return _lancer_git(list(args), repo, timeout=timeout, text=True,
                            encoding="utf-8", errors="replace")
 
     try:
         if not (repo / ".git").exists():
-            return False, "Pas de dépôt git : sauvegarde cloud non configurée."
+            return False, "Pas de dépôt git : sauvegarde en ligne non configurée."
 
         # 1. Les fichiers de données ont-ils changé depuis le dernier commit ?
         st = git("status", "--porcelain", "--", *fichiers)
@@ -2188,10 +2188,10 @@ def ajouter_recharge_exterieur(kwh: float, cout: float, operateur: str = "",
 
 
 TARIFS_DEMO = [
-    {"id": "demo_simple", "nom": "Demo Bleu", "type": "simple",
+    {"id": "demo_simple", "nom": "Démo Bleu", "type": "simple",
      "debut": "2025-01-01", "fin": "2025-12-31",
      "prix_kwh": 0.2516, "abonnement_mensuel": 13.47},
-    {"id": "demo_hphc", "nom": "Demo HP/HC", "type": "hp_hc",
+    {"id": "demo_hphc", "nom": "Démo HP/HC", "type": "hp_hc",
      "debut": "2026-01-01", "fin": None,
      "prix_hp": 0.27, "prix_hc": 0.13,
      "plages_hc": [["22:00", "06:00"]], "abonnement_mensuel": 15.90},
@@ -2211,9 +2211,9 @@ RECHARGES_DEMO_MAISON = [
 
 # (date, operateur, lieu, kWh, cout)
 RECHARGES_DEMO_EXTERIEUR = [
-    ("2026-04-15T12:30", "Ionity", "Aire de demonstration", 37.5, 22.50),
-    ("2026-04-15T18:45", "Tesla", "Halte de demonstration", 28.0, 12.60),
-    ("2026-06-01T09:15", "Fastned", "Station de demonstration", 30.0, 17.40),
+    ("2026-04-15T12:30", "Ionity", "Aire de démonstration", 37.5, 22.50),
+    ("2026-04-15T18:45", "Tesla", "Halte de démonstration", 28.0, 12.60),
+    ("2026-06-01T09:15", "Fastned", "Station de démonstration", 30.0, 17.40),
 ]
 
 

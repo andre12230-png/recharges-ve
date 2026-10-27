@@ -236,7 +236,7 @@ def test_la_page_ouvre_la_fenetre_pour_un_format_inconnu(qapp, dossier,
     monkeypatch.setattr(im, "demander_colonnes", choisir)
     page = im.construire(f)
     im.importer_fichier(f, str(_fichier(dossier, AUTRE)), page.resultat)
-    assert demandes and page.resultat.text().startswith("OK : 2 ajoutées")
+    assert demandes and page.resultat.text().startswith("✓ 2 ajoutées")
     # Le choix est retenu : le fichier suivant ne redemande rien.
     im.importer_fichier(f, str(_fichier(dossier, AUTRE.replace(
         "2026-03", "2026-05"), "mai.csv")), page.resultat)

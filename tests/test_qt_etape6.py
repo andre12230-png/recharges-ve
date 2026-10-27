@@ -299,7 +299,7 @@ def test_compte_rendu_d_import():
     res = {"ajoutes": 0, "remplaces": 0, "doublons": 182, "zero_kwh": 3,
            "parasites": 2, "total_lus": 187}
     texte, alerte = im.texte_resultat(res)
-    assert texte == ("OK : 0 ajoutées, 0 saisies manuelles remplacées, 182 "
+    assert texte == ("✓ 0 ajoutée, 0 saisie manuelle remplacée, 182 "
                      "doublons, 3 ignorées, 2 branchements sans recharge "
                      "écartés, 187 lues   (rien de nouveau : le fichier n'a "
                      "pas été modifié)")
@@ -362,7 +362,7 @@ def test_page_exporter(fenetre, monkeypatch, tmp_path):
     assert page.apercu.text() == "3 recharges · 37,00\xa0kWh · 9,00\xa0€"
     page.boutons["excel"].click()
     assert faits == [(3, "Tous les lieux · Toute la période")]
-    assert page.resultat.text() == "OK : 3 recharges exportées vers essai.xlsx"
+    assert page.resultat.text() == "✓ 3 recharges exportées vers essai.xlsx"
 
 
 def test_exporter_rien(fenetre):
