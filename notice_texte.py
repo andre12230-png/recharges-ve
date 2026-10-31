@@ -430,14 +430,6 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "prochain démarrage de "
          "l'application, quel que soit le réglage de Windows. Il ne touche "
          "pas à vos données."),
-        ("Le bouton « Sauvegarder »",
-         "Il n'apparaît que si vos données sont suivies par un dépôt git : "
-         "il en envoie alors une copie vers GitHub. Rien n'y part tout seul, "
-         "pas même à la fermeture : seulement quand vous cliquez. Si l'envoi "
-         "échoue (pas de connexion), cliquez de nouveau plus tard. C'est "
-         "facultatif, et sans rapport avec "
-         "les sauvegardes ci-dessus, qui, elles, sont toujours faites. Le "
-         "raccourci est Ctrl+S."),
     ]),
     ("Exporter", [
         ("", "Excel ou PDF, sur le lieu et la période de votre choix. Le "
@@ -465,10 +457,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "Aucune réponse n'est obligatoire."),
     ]),
     ("Raccourcis clavier", [
-        ("Ctrl+S", "Envoyer vers un dépôt git, si vous en avez un, les "
-                   "données déjà enregistrées. Ctrl+S n'enregistre pas le "
-                   "formulaire affiché : s'il reste des valeurs tapées, "
-                   "l'application le dit et n'envoie rien."),
+        ("Ctrl+S", "Ne sauvegarde rien : il rappelle seulement s'il reste "
+                   "des valeurs tapées à enregistrer. Pour enregistrer, "
+                   "utilisez le bouton de la page ou la touche Entrée."),
         ("Ctrl+F", "Ouvrir l'Historique et aller dans la recherche."),
         ("F5", "Recharger la page affichée (sauf si vous y avez tapé des "
                "valeurs pas encore enregistrées : elles restent)."),

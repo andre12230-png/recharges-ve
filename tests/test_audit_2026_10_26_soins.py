@@ -10,11 +10,6 @@
   disparaissaient sans laisser de trace. Desormais : un journal erreurs.log
   dans le dossier des donnees, et un message en clair a l'ecran.
 
-- #27 : la sauvegarde GitHub lancait « git » sans chemin : Windows pouvait
-  prendre un git.exe pose dans le dossier courant. Et sans
-  GIT_TERMINAL_PROMPT=0, une demande d'identifiants en console (que l'exe
-  n'a pas) faisait attendre l'application jusqu'au delai maximal.
-
 - #20 : une ligne CSV a l'energie negative etait comptee parmi les
   « branchements sans recharge ecartes » : une donnee fausse passait pour
   un cas normal. Elle compte desormais comme ligne non reconnue, annoncee
@@ -27,8 +22,6 @@ Donnees inventees, dans un dossier temporaire.
 
 from __future__ import annotations
 
-import os
-import subprocess
 import sys
 import tempfile
 
@@ -145,60 +138,6 @@ def test_26_main_pose_le_journal_des_erreurs(monkeypatch):
     monkeypatch.setattr(sys, "excepthook", sys.__excepthook__)
     module_fenetre.installer_journal_erreurs()
     assert sys.excepthook is module_fenetre.erreur_imprevue
-
-
-# ---------- #27 : git trouve par le PATH, sans question en console ----------
-
-NOM_GIT = "git.exe" if sys.platform == "win32" else "git"
-
-
-def _faux_git(dossier):
-    dossier.mkdir(parents=True, exist_ok=True)
-    (dossier / NOM_GIT).write_bytes(b"")
-    return dossier / NOM_GIT
-
-
-def test_27_git_jamais_pris_dans_le_dossier_courant(tmp_path, monkeypatch):
-    courant = tmp_path / "donnees"
-    _faux_git(courant)
-    monkeypatch.chdir(courant)
-    # Un PATH avec une entree relative (« . ») et une vide : ignorees.
-    monkeypatch.setenv("PATH", os.pathsep.join([".", ""]))
-    assert recharges._chemin_git() is None
-
-
-def test_27_git_trouve_dans_un_dossier_du_path(tmp_path, monkeypatch):
-    attendu = _faux_git(tmp_path / "Git" / "cmd")
-    _faux_git(tmp_path / "donnees")
-    monkeypatch.chdir(tmp_path / "donnees")
-    monkeypatch.setenv("PATH", os.pathsep.join([".", str(attendu.parent)]))
-    assert recharges._chemin_git() == str(attendu)
-
-
-def test_27_git_lance_par_son_chemin_sans_question_en_console(
-        tmp_path, monkeypatch):
-    attendu = _faux_git(tmp_path / "Git" / "cmd")
-    monkeypatch.setenv("PATH", str(attendu.parent))
-    appels = []
-
-    def faux_run(commande, **options):
-        appels.append((commande, options))
-        return subprocess.CompletedProcess(commande, 0, "", "")
-    monkeypatch.setattr(recharges.subprocess, "run", faux_run)
-    recharges._lancer_git(["status"], tmp_path)
-    commande, options = appels[0]
-    assert commande[0] == str(attendu)
-    assert options["env"]["GIT_TERMINAL_PROMPT"] == "0"
-
-
-def test_27_sans_git_la_sauvegarde_le_dit(donnees_rendues, tmp_path,
-                                          monkeypatch):
-    (tmp_path / ".git").mkdir()
-    recharges.rediriger_donnees(tmp_path)
-    monkeypatch.setenv("PATH", "")
-    ok, message = recharges.synchroniser_github()
-    assert not ok
-    assert "git n'est pas installé" in message
 
 
 # ---------- #20 : energie negative = ligne non reconnue ----------

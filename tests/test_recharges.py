@@ -21,7 +21,6 @@ import json
 import os
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -991,124 +990,6 @@ class TestJeuDemo(unittest.TestCase):
         r.rediriger_donnees(avant)
         self.assertEqual(r.dossier_donnees(), avant)
         self.assertEqual(r.DATA_FILE, avant / "recharges.json")
-
-
-class TestSauvegardeGitHub(unittest.TestCase):
-    """Sauvegarde cloud : le cas du depot sans branche distante (§ 2.5)."""
-
-    def setUp(self):
-        if not shutil.which("git"):
-            self.skipTest("git n'est pas installe")
-        # Un depot jetable, avec la meme forme que le vrai : depot/dist/
-        self.racine = Path(tempfile.mkdtemp(prefix="depot_test_"))
-        self.dist = self.racine / "dist"
-        self.dist.mkdir()
-        (self.dist / "recharges.json").write_text('{"recharges": []}',
-                                                  encoding="utf-8")
-        (self.dist / "tarifs.json").write_text('{"tarifs": []}',
-                                               encoding="utf-8")
-        self.git("init")
-        self.git("config", "user.name", "Test")
-        self.git("config", "user.email", "test@example.invalid")
-        self.git("add", "-A")
-        self.git("commit", "-m", "depart")
-        # recharges.py deduit le depot de BASE.parent : on detourne le
-        # dossier de donnees le temps du test, puis on le remet. Passer par
-        # rediriger_donnees() et non par BASE seul : les chemins des fichiers
-        # en decoulent, et git a besoin qu'ils soient dans le depot.
-        self.base_origine = r.BASE
-        r.rediriger_donnees(self.dist)
-
-    def tearDown(self):
-        r.rediriger_donnees(self.base_origine)
-        effacer_vraiment(self.racine)
-
-    def git(self, *args):
-        return subprocess.run(["git", *args], cwd=str(self.racine),
-                              capture_output=True, text=True)
-
-    def test_sans_branche_distante_on_ne_dit_pas_que_c_est_sauvegarde(self):
-        """Avant : « Donnees deja sauvegardees sur GitHub » — c'etait faux.
-
-        La commande qui compte les commits en attente echoue quand aucune
-        branche distante n'est configuree. Cet echec etait pris pour « rien
-        en attente », et l'utilisateur croyait ses donnees a l'abri.
-        """
-        ok, message = r.synchroniser_github()
-        self.assertFalse(ok)
-        self.assertIn("Aucune branche distante", message)
-
-    def test_sans_depot_git_du_tout(self):
-        """Un dossier ordinaire, sans depot : on le dit clairement."""
-        ailleurs = Path(tempfile.mkdtemp(prefix="sans_git_"))
-        (ailleurs / "dist").mkdir()
-        r.rediriger_donnees(ailleurs / "dist")
-        try:
-            self.assertFalse(r.sauvegarde_cloud_configuree())
-            ok, message = r.synchroniser_github()
-        finally:
-            effacer_vraiment(ailleurs)
-        self.assertFalse(ok)
-        self.assertIn("Pas de dépôt git", message)
-
-    def test_avec_depot_git_la_sauvegarde_est_declaree_configuree(self):
-        """C'est ce booleen qui decide d'afficher, ou non, le bouton."""
-        self.assertTrue(r.sauvegarde_cloud_configuree())
-        self.assertEqual(r.depot_git_des_donnees(), self.racine)
-
-    def test_clone_du_depot_public_pas_de_sauvegarde_cloud(self):
-        """Un clone du depot public : dist\\ est dans un depot de CODE, qui
-        ignore les donnees. Avant : le bouton « Sauvegarder » apparaissait, et
-        Ctrl+S poussait vers le depot clone (le depot public, ou la copie de
-        l'utilisateur). Les donnees ne doivent jamais partir vers un depot
-        qui ne les suit pas."""
-        self.git("rm", "--cached", "-q", "dist/recharges.json",
-                 "dist/tarifs.json")
-        (self.racine / ".gitignore").write_text("*.json\n", encoding="utf-8")
-        self.git("add", ".gitignore")
-        self.git("commit", "-m", "donnees ignorees")
-        self.assertIsNone(r.depot_git_des_donnees())
-        self.assertFalse(r.sauvegarde_cloud_configuree())
-        ok, _message = r.synchroniser_github()
-        self.assertFalse(ok)
-        journal = self.git("log", "--oneline").stdout
-        self.assertNotIn("Sauvegarde auto", journal)
-
-    def test_depot_git_dans_le_dossier_des_donnees_lui_meme(self):
-        """Un dossier d'usage separe du projet est son propre depot : les
-        donnees a sa racine, le programme dans un sous-dossier. La sauvegarde
-        doit y trouver le depot, et y faire son commit."""
-        donnees = Path(tempfile.mkdtemp(prefix="usage_test_"))
-
-        def git(*args):
-            return subprocess.run(["git", *args], cwd=str(donnees),
-                                  capture_output=True, text=True)
-
-        try:
-            (donnees / "recharges.json").write_text('{"recharges": []}',
-                                                    encoding="utf-8")
-            (donnees / "tarifs.json").write_text('{"tarifs": []}',
-                                                 encoding="utf-8")
-            git("init")
-            git("config", "user.name", "Test")
-            git("config", "user.email", "test@example.invalid")
-            git("add", "-A")
-            git("commit", "-m", "depart")
-            r.rediriger_donnees(donnees)
-            self.assertEqual(r.depot_git_des_donnees(), donnees)
-            (donnees / "tarifs.json").write_text('{"tarifs": [], "x": 1}',
-                                                 encoding="utf-8")
-            ok, message = r.synchroniser_github()
-            journal = git("log", "--oneline").stdout
-        finally:
-            # tearDown remet ensuite le dossier d'origine.
-            r.rediriger_donnees(self.dist)
-            effacer_vraiment(donnees)
-        # Ce depot jetable n'a pas de branche distante : le commit est fait,
-        # et l'envoi dit clairement qu'il n'a nulle part ou aller.
-        self.assertIn("Sauvegarde auto", journal)
-        self.assertFalse(ok)
-        self.assertIn("Aucune branche distante", message)
 
 
 if __name__ == "__main__":

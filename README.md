@@ -151,7 +151,7 @@ en pied de menu.
 
 | Touche | Effet |
 |---|---|
-| `Ctrl+S` | Envoie vers un dépôt git, si vous en avez un, les données déjà enregistrées (voir plus bas) ; il n'enregistre pas le formulaire affiché et le dit s'il reste des valeurs tapées |
+| `Ctrl+S` | Ne sauvegarde rien : il rappelle seulement s'il reste des valeurs tapées à enregistrer |
 | `Ctrl+F` | Ouvre l'Historique, curseur dans la recherche |
 | `F5` | Reconstruit la page affichée, sauf si elle porte des valeurs tapées pas encore enregistrées |
 | `Entrée` | Enregistre le formulaire en cours, depuis n'importe quelle case ; dans l'Historique, ouvre la recharge choisie |
@@ -233,15 +233,10 @@ réglages neutres. `recharges.json` apparaît à votre première recharge.
    les autres partent à la Corbeille de Windows (jamais effacées pour de
    bon : sur une clé USB ou un lecteur réseau, qui n'ont pas de Corbeille,
    elles restent en place).
-   **Facultatif** : si vos données sont suivies par un dépôt git (un dépôt
-   fait pour elles, jamais celui du code, qui les ignore), le bouton
-   **Sauvegarder**, en haut de la fenêtre (ou Ctrl+S), envoie une
-   copie sur GitHub. Rien ne part à la fermeture. Sans dépôt git, ce bouton
-   n'apparaît pas et l'application n'en parle jamais.
 5. **Sauvegarde externe** : le bouton **💾 Sauvegarde externe** du menu de
    gauche copie `recharges.json` et `tarifs.json` sur une clé USB ou un
    disque, dans un dossier daté, et vérifie chaque copie. Les protections
-   précédentes (sauf l'envoi GitHub) restent sur le même disque que les données ;
+   précédentes restent sur le même disque que les données ;
    celle-ci survit à sa panne. Un `LISEZMOI.txt` déposé à côté explique
    comment la remettre en service.
 
@@ -482,7 +477,7 @@ dist\Recharges-VE\Recharges-VE.exe --autotest rapport.txt --donnees-reelles
 | `formats.py` | La mise en forme des valeurs (euros, kWh, dates). |
 | `filtres.py` | Sélection par période, recherche, tri, regroupement. Fonctions pures, sans interface ni fichiers. |
 | `constantes.py` | Nom, version, listes d'opérateurs et de cartes, colonnes du tableau. Ne dépend de rien. |
-| `recharges.py` | Le cœur : lecture et écriture des données, calcul des coûts, import CSV, sauvegardes et sauvegarde GitHub. Ne dépend pas de l'interface. |
+| `recharges.py` | Le cœur : lecture et écriture des données, calcul des coûts, import CSV et sauvegardes. Ne dépend pas de l'interface. |
 | `temps_reel.py` | Les durées vraies d'une recharge, y compris la nuit du changement d'heure (les heures sont rangées à l'heure de l'horloge). Ne dépend ni de Qt ni du reste de l'application. |
 | `export.py` | Génération des fichiers Excel et PDF. À ne pas confondre avec `pages\exporter.py`, qui est la page : celui-ci fabrique les fichiers, celle-là affiche les boutons. |
 | `build.bat` | Fabrication de l'exécutable et vérification. |

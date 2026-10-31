@@ -20,8 +20,6 @@ Toutes les donnees sont inventees, dans un dossier temporaire.
 
 import json
 import os
-import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -170,50 +168,6 @@ def test_a03_anciennes_donnees_compatibles_acceptees(dossier):
     assert r.structure_recharges_valide(
         {"recharges": [], "releves_km": [{"date": "2025-01-01",
                                           "km": 1000}]})
-
-
-# ---------- A05 : la sauvegarde Git ne prend que les donnees ----------
-
-@pytest.mark.skipif(not shutil.which("git"), reason="git n'est pas installe")
-def test_a05_sauvegarde_git_n_emporte_pas_les_autres_fichiers(tmp_path):
-    depot = tmp_path / "usage"
-    distant = tmp_path / "distant.git"
-    depot.mkdir()
-
-    def git(*args, cwd=depot):
-        return subprocess.run(["git", *args], cwd=str(cwd),
-                              capture_output=True, text=True)
-
-    git("init", "--bare", str(distant), cwd=tmp_path)
-    ecrire(depot / "recharges.json", {"recharges": []})
-    ecrire(depot / "tarifs.json", {"tarifs": []})
-    git("init")
-    git("config", "user.name", "Test")
-    git("config", "user.email", "test@example.invalid")
-    git("add", "-A")
-    git("commit", "-m", "depart")
-    git("remote", "add", "origin", str(distant))
-    branche = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-    git("push", "-u", "origin", branche)
-
-    # Un fichier etranger, deja prepare (indexe) avant la sauvegarde.
-    (depot / "autre.txt").write_text("brouillon", encoding="utf-8")
-    git("add", "autre.txt")
-
-    ancien = r.BASE
-    r.rediriger_donnees(depot)
-    try:
-        ecrire(depot / "recharges.json", UNE_RECHARGE)
-        r.vider_cache()
-        ok, message = r.synchroniser_github()
-    finally:
-        r.rediriger_donnees(ancien)
-    assert ok, message
-    fichiers = git("show", "--name-only", "--format=", "HEAD").stdout
-    assert "recharges.json" in fichiers
-    assert "autre.txt" not in fichiers
-    # Le fichier etranger reste prepare, comme l'utilisateur l'avait laisse.
-    assert "autre.txt" in git("diff", "--cached", "--name-only").stdout
 
 
 # ======================================================================

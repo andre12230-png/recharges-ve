@@ -324,13 +324,10 @@ def test_ctrl_f_ouvre_l_historique(fenetre):
 
 # ---------- sauvegardes ----------
 
-def test_fermeture_copie_dans_sauvegardes_et_rien_vers_github(
-        fenetre, monkeypatch):
+def test_fermeture_copie_dans_sauvegardes(fenetre, monkeypatch):
     appels = []
     monkeypatch.setattr(sauvegarde_externe, "sauvegarder_a_la_fermeture",
                         lambda *a, **k: appels.append(a))
-    monkeypatch.setattr(module_fenetre, "synchroniser_github",
-                        lambda: pytest.fail("rien ne doit partir vers GitHub"))
     fenetre.close()
     assert len(appels) == 1
     fichiers = [p.name for p in appels[0][0]]

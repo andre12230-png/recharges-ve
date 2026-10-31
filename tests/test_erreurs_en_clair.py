@@ -1,13 +1,10 @@
-"""Les erreurs techniques dites en francais, et la phrase fausse sur GitHub.
+"""Les erreurs techniques dites en francais.
 
 Demande de l'auteur du 26/09/2026 : les boites de message recopiaient tel
 quel le texte d'erreur de Python ou de git, en anglais (« Expecting value:
 line 1 column 1 (char 0) », « [Errno 13] Permission denied »). erreurs.py
 les traduit en phrases simples ; ces tests le verifient, puis verifient que
 les messages de l'application passent bien par lui.
-
-Et : un envoi rate vers GitHub annoncait « Il sera retente a la prochaine
-fermeture ». Faux depuis le 24/09/2026 : rien ne part plus a la fermeture.
 
     py -m pytest tests/test_erreurs_en_clair.py
 """
@@ -16,9 +13,6 @@ import ast
 import errno
 import json
 import os
-import shutil
-import stat
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -218,51 +212,3 @@ def test_la_detection_voit_une_recopie_brute(tmp_path):
         "    texte = str(e)\n    autre = f'{e}'\n    print(f'{e}')\n",
         encoding="utf-8")
     assert _recopies_brutes(essai) == [4, 5]
-
-
-# ---------- l'envoi rate vers GitHub ----------
-
-def _effacer(dossier: Path) -> None:
-    """Efface un dossier, meme s'il contient un depot git (fichiers en
-    lecture seule sous Windows)."""
-    def insister(fonction, chemin, _exception):
-        os.chmod(chemin, stat.S_IWRITE)
-        fonction(chemin)
-    shutil.rmtree(dossier, onexc=insister)
-
-
-@pytest.mark.skipif(not shutil.which("git"), reason="git n'est pas installé")
-def test_envoi_rate_ne_promet_plus_la_fermeture(tmp_path):
-    def git(*args, cwd=tmp_path / "donnees"):
-        return subprocess.run(["git", *args], cwd=str(cwd),
-                              capture_output=True, text=True)
-
-    donnees = tmp_path / "donnees"
-    donnees.mkdir()
-    (donnees / "recharges.json").write_text('{"recharges": []}',
-                                            encoding="utf-8")
-    (donnees / "tarifs.json").write_text('{"tarifs": []}', encoding="utf-8")
-    distant = tmp_path / "distant.git"
-    git("init", "--bare", str(distant), cwd=tmp_path)
-    git("init")
-    git("config", "user.name", "Test")
-    git("config", "user.email", "test@example.invalid")
-    git("add", "-A")
-    git("commit", "-m", "depart")
-    git("remote", "add", "origin", str(distant))
-    assert git("push", "-u", "origin", "HEAD").returncode == 0
-    # Le depot distant disparait : l'envoi suivant echouera.
-    _effacer(distant)
-
-    ancien = r.BASE
-    r.rediriger_donnees(donnees)
-    try:
-        (donnees / "tarifs.json").write_text('{"tarifs": [], "x": 1}',
-                                             encoding="utf-8")
-        ok, message = r.synchroniser_github()
-    finally:
-        r.rediriger_donnees(ancien)
-        _effacer(donnees)
-    assert not ok
-    assert "fermeture" not in message
-    assert "Sauvegarder" in message

@@ -12,11 +12,9 @@ sont dans pages/. Elle se lance par app.py :
 from __future__ import annotations
 
 import hashlib
-import queue
 import shutil
 import sys
 import tempfile
-import threading
 import traceback
 from datetime import date
 from pathlib import Path
@@ -26,7 +24,7 @@ from PySide6.QtGui import (QAction, QGuiApplication, QIcon, QKeySequence,
                            QShortcut)
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QMainWindow,
-                               QMenu, QMessageBox, QProgressDialog, QPushButton,
+                               QMenu, QMessageBox, QPushButton,
                                QScrollArea, QVBoxLayout, QWidget)
 
 import liens              # liens.AIDE_EN_LIGNE : « Votre avis », « Mise à jour »
@@ -43,7 +41,7 @@ from erreurs import erreur_en_clair
 from filtres import annee_en_cours, filtrer_par_periode, mois_en_cours
 from pages import CONSTRUCTEURS
 from recharges import (assurer_ids, charger_donnees, dossier_donnees,
-                       sauvegarder_donnees, synchroniser_github)
+                       sauvegarder_donnees)
 from formats import fmt_eur, fmt_nb_recharges
 from theme_qt import (CREME, LARGEUR_BANDEAU, appliquer_theme,
                       installer_traduction_qt, theme_actif)
@@ -308,18 +306,6 @@ class FenetrePrincipale(QMainWindow):
         titres.addWidget(self.sous_titre_vue)
         entete.addLayout(titres, 1)
 
-        # Envoi manuel vers GitHub, sans attendre la fermeture. Le bouton
-        # n'existe que si les donnees vivent dans un depot git : proposer une
-        # « sauvegarde GitHub » a qui n'en a pas ne fait qu'inquieter.
-        self.bouton_sauver = None
-        if recharges.sauvegarde_cloud_configuree():
-            self.bouton_sauver = QPushButton("Sauvegarder")
-            self.bouton_sauver.setToolTip(
-                "Envoyer maintenant une copie de vos données vers GitHub "
-                "(Ctrl+S)")
-            self.bouton_sauver.clicked.connect(self._sauvegarder_maintenant)
-            entete.addWidget(self.bouton_sauver, 0, Qt.AlignVCenter)
-
         tuile = QFrame()
         tuile.setObjectName("TuileTotal")
         tuile.setMinimumWidth(190)
@@ -576,7 +562,7 @@ class FenetrePrincipale(QMainWindow):
         """Raccourcis valables partout dans la fenetre, quel que soit le
         champ qui a le curseur."""
         for touches, action in (
-                ("Ctrl+S", self._sauvegarder_maintenant),
+                ("Ctrl+S", self._reflexe_ctrl_s),
                 ("Ctrl+F", self._aller_a_la_recherche),
                 # Les touches de fonction evitent d'entrer en conflit avec
                 # la saisie.
@@ -726,95 +712,31 @@ class FenetrePrincipale(QMainWindow):
         """« Ajouter une recharge », « Paramètres » : pour les messages."""
         return ", ".join(f"« {menu.TITRES.get(v, (v, ''))[0]} »" for v in vues)
 
-    def _sauvegarder_maintenant(self) -> None:
-        """Ctrl+S ou bouton « Sauvegarder » : envoie les donnees vers GitHub
-        sans attendre la fermeture."""
-        # Ctrl+S n'enregistre pas le formulaire affiche : il envoie ce qui est
-        # deja enregistre. Avant, il laissait croire que la recharge tapee
-        # l'etait ; elle se perdait ensuite au changement de page.
-        # Sans depot git (le cas de presque tous les utilisateurs), Ctrl+S
-        # ne parle ni de git ni de depot : c'est un reflexe de beaucoup de
-        # gens, on lui repond avec leurs mots (analyse « nouvel
-        # utilisateur » du 19/10/2026).
-        avec_depot = recharges.sauvegarde_cloud_configuree()
+    def _reflexe_ctrl_s(self) -> None:
+        """Ctrl+S, reflexe de beaucoup de gens (analyse « nouvel utilisateur »
+        du 19/10/2026) : il ne sauvegarde rien. L'envoi vers GitHub a ete
+        retire le 31/10/2026 ; il reste ce rappel, pour qu'une valeur tapee
+        ne passe pas pour enregistree."""
         attente = self.saisies_en_attente()
         if attente:
-            if avec_depot:
-                debut = ("Ctrl+S n'enregistre pas ce que vous venez de "
-                         "taper : il envoie vers votre dépôt les données "
-                         "déjà enregistrées.\n\n")
-                fin = ", puis refaites Ctrl+S si vous voulez les envoyer."
-            else:
-                debut = ("Ctrl+S n'enregistre pas ce que vous venez de "
-                         "taper.\n\n")
-                fin = "."
             QMessageBox.information(
                 self, "Pas encore enregistré",
-                debut + "Des valeurs tapées dans "
-                f"{self._noms_des_pages(attente)} ne sont pas encore "
-                "enregistrées. Cliquez sur le bouton « Enregistrer… » de la "
-                "page (ou appuyez sur Entrée dans une case)" + fin)
+                "Ctrl+S n'enregistre pas ce que vous venez de taper.\n\n"
+                f"Des valeurs tapées dans {self._noms_des_pages(attente)} ne "
+                "sont pas encore enregistrées. Cliquez sur le bouton "
+                "« Enregistrer… » de la page (ou appuyez sur Entrée dans une "
+                "case).")
             self.afficher_vue(attente[0])
             return
-        if not avec_depot:
-            QMessageBox.information(
-                self, "Rien d'autre à faire",
-                "Tout ce que vous avez enregistré avec les boutons de "
-                "l'application est déjà gardé sur ce PC : Ctrl+S n'est pas "
-                "nécessaire.\n\n"
-                "Une copie de secours est faite toute seule avant chaque "
-                "modification. Pour garder aussi une copie ailleurs (clé "
-                "USB, disque externe), utilisez « 💾 Sauvegarde externe » "
-                "dans le menu de gauche.")
-            return
-
-        def fini(ok: bool, msg: str) -> None:
-            if ok:
-                QMessageBox.information(self, "Sauvegarde GitHub", msg)
-            else:
-                QMessageBox.warning(
-                    self, "Sauvegarde GitHub",
-                    f"{msg}\n\nVos données restent enregistrées sur ce PC.")
-
-        self._lancer_sync_github("Sauvegarde des données vers GitHub…", fini)
-
-    def _lancer_sync_github(self, texte_attente: str, quand_fini) -> None:
-        """Envoie les donnees vers GitHub dans un fil d'execution separe.
-
-        Le « git push » peut durer jusqu'a 60 secondes : lance sur le fil de
-        l'interface, il figerait la fenetre (« Ne repond pas »). Le travail
-        se fait a cote ; le resultat revient par une file d'attente, lue
-        toutes les 100 ms sur le fil de l'interface — le seul qui ait le
-        droit de toucher aux fenetres."""
-        attente = QProgressDialog(texte_attente, "", 0, 0, self)
-        attente.setWindowTitle("Sauvegarde")
-        attente.setCancelButton(None)        # on ne peut pas l'interrompre
-        attente.setWindowModality(Qt.WindowModal)
-        attente.setMinimumDuration(0)
-        attente.show()
-        resultat: queue.Queue = queue.Queue()
-
-        def travail():
-            # synchroniser_github() ne leve jamais d'exception, mais on ne
-            # laisse rien passer : sans reponse, la surveillance tournerait
-            # indefiniment.
-            try:
-                resultat.put(synchroniser_github())
-            except Exception as e:
-                resultat.put((False, erreur_en_clair(e)))
-
-        threading.Thread(target=travail, daemon=True).start()
-
-        def surveiller():
-            try:
-                ok, msg = resultat.get_nowait()
-            except queue.Empty:
-                QTimer.singleShot(100, self, surveiller)
-                return
-            attente.close()
-            quand_fini(ok, msg)
-
-        surveiller()
+        QMessageBox.information(
+            self, "Rien d'autre à faire",
+            "Tout ce que vous avez enregistré avec les boutons de "
+            "l'application est déjà gardé sur ce PC : Ctrl+S n'est pas "
+            "nécessaire.\n\n"
+            "Une copie de secours est faite toute seule avant chaque "
+            "modification. Pour garder aussi une copie ailleurs (clé "
+            "USB, disque externe), utilisez « 💾 Sauvegarde externe » "
+            "dans le menu de gauche.")
 
     def _sauvegarder_externe(self) -> None:
         """Copie les donnees sur une cle USB ou un disque choisi par
@@ -855,10 +777,8 @@ class FenetrePrincipale(QMainWindow):
         """A la fermeture : copie des donnees dans le sous-dossier
         « Sauvegardes » du dossier des donnees (si elles ont change).
 
-        Rien ne part vers GitHub a la fermeture (decision du 24/09/2026) :
-        seul le bouton « Sauvegarder » (Ctrl+S) le fait, a la demande. En cas
-        d'echec, un avertissement s'affiche ; cet echec ne bloque pas la
-        fermeture.
+        En cas d'echec, un avertissement s'affiche ; cet echec ne bloque pas
+        la fermeture.
 
         Des valeurs tapees et non enregistrees : on pose d'abord la question
         (« Annuler » par defaut, qui ramene a la page). Avant, elles se

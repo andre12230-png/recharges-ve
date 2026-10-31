@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from pathlib import Path
 
 # Redirection AVANT tout import du projet (voir conftest.py) : filet de
 # secours si ce fichier est lance autrement que par pytest.
@@ -199,67 +200,39 @@ def test_fermer_sans_enregistrer_ferme(qapp, fenetre, messages):
                                  "Fermer sans enregistrer",
                                  "Revenir à la saisie")]
 
-
 # --- Ctrl+S ------------------------------------------------------------------
+# L'envoi vers GitHub a ete retire le 31/10/2026 : Ctrl+S ne sauvegarde rien,
+# il reste un rappel pour ceux qui ont ce reflexe.
 
-def test_ctrl_s_avec_saisie_le_dit_et_n_envoie_rien(
-        qapp, fenetre, messages, monkeypatch):
-    envois = []
-    monkeypatch.setattr(module_fenetre.recharges,
-                        "sauvegarde_cloud_configuree", lambda: True)
-    monkeypatch.setattr(fenetre, "_lancer_sync_github",
-                        lambda *a: envois.append(a))
+def test_ctrl_s_avec_saisie_le_dit(qapp, fenetre, messages):
     fenetre.afficher_vue("ajouter")
     _taper(qapp, fenetre)
-    fenetre._sauvegarder_maintenant()
-    assert envois == []
-    assert "n'enregistre pas" in messages.informations[0]
-    assert "Ajouter une recharge" in messages.informations[0]
+    fenetre._reflexe_ctrl_s()
+    texte = messages.informations[0]
+    assert "n'enregistre pas" in texte
+    assert "Ajouter une recharge" in texte
+    assert "dépôt" not in texte
     assert _present(qapp, fenetre)
 
 
-def test_ctrl_s_sans_saisie_envoie_comme_avant(
-        qapp, fenetre, messages, monkeypatch):
-    envois = []
-    monkeypatch.setattr(module_fenetre.recharges,
-                        "sauvegarde_cloud_configuree", lambda: True)
-    monkeypatch.setattr(fenetre, "_lancer_sync_github",
-                        lambda *a: envois.append(a))
-    fenetre._sauvegarder_maintenant()
-    assert len(envois) == 1
-
-
-def test_ctrl_s_sans_depot_ne_dit_plus_que_tout_est_enregistre(
-        qapp, fenetre, messages, monkeypatch):
-    monkeypatch.setattr(module_fenetre.recharges,
-                        "sauvegarde_cloud_configuree", lambda: False)
-    fenetre._sauvegarder_maintenant()
-    texte = messages.informations[0]
-    assert "Vos données sont enregistrées sur ce PC" not in texte
-    assert "avec les boutons" in texte
-
-
-def test_ctrl_s_sans_depot_ne_parle_pas_de_git(
-        qapp, fenetre, messages, monkeypatch):
-    """Analyse « nouvel utilisateur » du 19/10/2026 : Ctrl+S, reflexe de
-    beaucoup de gens, parlait de « dépôt git (GitHub par exemple) » a qui
-    n'en a pas. Il oriente maintenant vers la Sauvegarde externe."""
-    monkeypatch.setattr(module_fenetre.recharges,
-                        "sauvegarde_cloud_configuree", lambda: False)
-    fenetre._sauvegarder_maintenant()
+def test_ctrl_s_sans_saisie_oriente_vers_la_sauvegarde_externe(
+        qapp, fenetre, messages):
+    """Analyse « nouvel utilisateur » du 19/10/2026 : ce reflexe recoit une
+    reponse dans les mots de l'utilisateur, sans parler de git."""
+    fenetre._reflexe_ctrl_s()
     texte = " ".join(messages.titres + messages.informations).lower()
     assert "git" not in texte and "dépôt" not in texte
     assert "sauvegarde externe" in texte
+    assert "avec les boutons" in texte
 
 
-def test_ctrl_s_avec_saisie_sans_depot_ne_parle_pas_de_depot(
-        qapp, fenetre, messages, monkeypatch):
-    monkeypatch.setattr(module_fenetre.recharges,
-                        "sauvegarde_cloud_configuree", lambda: False)
-    fenetre.afficher_vue("ajouter")
-    _taper(qapp, fenetre)
-    fenetre._sauvegarder_maintenant()
-    texte = messages.informations[0]
-    assert "dépôt" not in texte
-    assert "n'enregistre pas" in texte
-    assert "Ajouter une recharge" in texte
+def test_plus_aucun_envoi_vers_github(fenetre):
+    """Rien dans l'application ne peut envoyer les donnees vers GitHub : ni
+    bouton « Sauvegarder », ni fonction d'envoi, ni appel a git."""
+    assert not hasattr(module_fenetre.recharges, "synchroniser_github")
+    assert not hasattr(module_fenetre, "synchroniser_github")
+    textes = [b.text() for b in fenetre.findChildren(QPushButton)]
+    assert "Sauvegarder" not in textes
+    racine = Path(module_fenetre.__file__).resolve().parent
+    for nom in ("recharges.py", "fenetre.py"):
+        assert "subprocess" not in (racine / nom).read_text(encoding="utf-8")
