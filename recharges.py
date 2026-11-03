@@ -490,14 +490,29 @@ def _remplacer(tmp: str, cible: Path) -> None:
 
 def sauvegarder_donnees(data: dict) -> None:
     """Sauvegarde atomique : backup, écriture dans un fichier temporaire,
-    fsync, puis remplacement atomique. Évite toute corruption en cas de crash."""
+    fsync, puis remplacement atomique. Évite toute corruption en cas de crash.
+
+    Les données sont contrôlées AVANT d'être écrites, comme elles le sont à
+    la lecture : ce qui serait refusé à la relecture n'est jamais écrit."""
     global _cache_donnees, _empreinte_cache
+    # Une valeur infinie (0,001 kWh pour un montant énorme) était écrite
+    # telle quelle (« Infinity ») ; au démarrage suivant, le fichier entier
+    # était jugé abîmé et remplacé par la sauvegarde précédente, en perdant
+    # la saisie. Refusée ici, avant toute copie ou écriture (audit à blanc
+    # du 03/11/2026). Le téléphone et l'import passent aussi par ici.
+    if not structure_recharges_valide(data):
+        raise ValueError(
+            "Enregistrement refusé : il contient une valeur impossible (un "
+            "nombre infini ou illisible, par exemple). Rien n'a été écrit, "
+            "vos données sont intactes.")
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     _creer_backup()
     fd, tmp = tempfile.mkstemp(dir=str(DATA_FILE.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            # allow_nan=False : filet de plus, si une valeur non finie
+            # échappait au contrôle ci-dessus (JSON n'en a pas).
+            json.dump(data, f, indent=2, ensure_ascii=False, allow_nan=False)
             f.flush()
             os.fsync(f.fileno())
         _remplacer(tmp, DATA_FILE)  # atomique sur un même volume

@@ -22,6 +22,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 # --- redirection des donnees : AVANT l'import de recharges (test_isolation) --
 DOSSIER_TEST = Path(tempfile.mkdtemp(prefix="recharges_rappel_"))
@@ -136,13 +137,21 @@ class TestQuandIlParle(BaseRappel):
 class TestRobustesse(BaseRappel):
     def test_un_releve_sans_date_ne_fait_pas_tomber_l_application(self):
         """Le rappel est un confort : il ne doit jamais empecher le tableau
-        de bord de s'afficher."""
-        data = r.charger_donnees(pour_modification=True)
-        data["releves_km"] = [{"id": "k0", "km": 1000, "date": "n'importe quoi"}]
-        data["recharges"] = [{"id": "r0", "lieu": "exterieur", "kwh": 30,
-                              "cout_eur": 18, "date": "2026-09-01T10:00"}]
-        r.sauvegarder_donnees(data)
-        self.assertIsNone(self.rappel())
+        de bord de s'afficher.
+
+        Un tel releve ne peut plus etre ecrit : sauvegarder_donnees refuse
+        depuis le 03/11/2026 ce que la lecture refuserait. Il est donc donne
+        au rappel a la place de la lecture du fichier."""
+        abime = [{"id": "k0", "km": 1000, "date": "n'importe quoi"}]
+        data = {"releves_km": abime,
+                "recharges": [{"id": "r0", "lieu": "exterieur", "kwh": 30,
+                               "cout_eur": 18, "date": "2026-09-01T10:00"}]}
+        with mock.patch.object(r, "charger_releves_km", return_value=abime), \
+                mock.patch.object(r, "charger_donnees", return_value=data):
+            self.assertIsNone(self.rappel())
+        # Et l'ecriture d'un tel releve est refusee.
+        with self.assertRaises(ValueError):
+            r.sauvegarder_donnees(data)
 
 
 if __name__ == "__main__":

@@ -739,8 +739,11 @@ class TestFichiers(unittest.TestCase):
         self.assertEqual(autre["operateur"], "Ionity")
 
     def test_horodatage_libre(self):
+        # Une energie : sans elle, le fichier serait refuse a la relecture,
+        # donc a l'ecriture depuis le 03/11/2026.
         r.sauvegarder_donnees({"recharges": [
-            {"id": "e1", "date": "2026-07-15T12:00", "lieu": "exterieur"},
+            {"id": "e1", "date": "2026-07-15T12:00", "lieu": "exterieur",
+             "kwh": 20.0},
         ]})
         # une minute d'ecart suffit : c'est justement ce qu'on veut obtenir
         self.assertIsNone(r.horodatage_deja_utilise("2026-07-15T12:01"))
@@ -750,7 +753,8 @@ class TestFichiers(unittest.TestCase):
     def test_horodatage_ignore_la_recharge_qu_on_modifie(self):
         """Sinon, modifier une recharge se plaindrait d'elle-meme."""
         r.sauvegarder_donnees({"recharges": [
-            {"id": "e1", "date": "2026-07-15T12:00", "lieu": "exterieur"},
+            {"id": "e1", "date": "2026-07-15T12:00", "lieu": "exterieur",
+             "kwh": 20.0},
         ]})
         self.assertIsNone(r.horodatage_deja_utilise("2026-07-15T12:00",
                                                     sauf_id="e1"))
@@ -957,6 +961,47 @@ class TestFichiers(unittest.TestCase):
         res = r.importer_csv_maison(chemin)
         self.assertEqual(res["ajoutes"], 1)
         self.assertEqual(res["parasites"], 1)
+
+    # --- ce qui est ecrit doit pouvoir etre relu (audit a blanc, 03/11) ---
+
+    def test_une_valeur_infinie_n_est_jamais_ecrite(self):
+        """0,001 kWh pour un montant enorme donne un prix au kWh infini.
+        Avant : le moteur l'ecrivait (« Infinity »), puis jugeait le fichier
+        abime a la relecture et revenait a la sauvegarde precedente, en
+        perdant la saisie. Maintenant : refusee, fichier intact."""
+        r.ajouter_recharge_exterieur(30.0, 15.0, operateur="Saine",
+                                     date="2026-03-01T10:00")
+        avant = r.DATA_FILE.read_bytes()
+        r.DERNIERE_RESTAURATION = None
+        with self.assertRaises(ValueError) as refus:
+            r.ajouter_recharge_exterieur(0.001, 1e308, operateur="Extreme",
+                                         date="2026-03-02T10:00")
+        self.assertIn("valeur impossible", str(refus.exception))
+        self.assertEqual(r.DATA_FILE.read_bytes(), avant)
+        # A la relecture : la recharge saine seule, sans aucune restauration.
+        r.vider_cache()
+        self.assertEqual(
+            [x["operateur"] for x in r.charger_donnees()["recharges"]],
+            ["Saine"])
+        self.assertIsNone(r.DERNIERE_RESTAURATION)
+
+    def test_sauvegarder_refuse_ce_qu_il_ne_saurait_relire(self):
+        """Quel que soit le chemin (saisie, import, recalcul, telephone),
+        sauvegarder_donnees n'ecrit que ce que la lecture acceptera : sinon
+        rien n'est ecrit, et aucun fichier temporaire ne reste."""
+        r.ajouter_recharge_exterieur(30.0, 15.0, operateur="Saine",
+                                     date="2026-03-01T10:00")
+        avant = r.DATA_FILE.read_bytes()
+        for abimee in ({"date": "2026-03-02T10:00", "kwh": float("nan")},
+                       {"date": "2026-03-02T10:00", "kwh": 20.0,
+                        "prix_kwh": float("inf")},
+                       {"date": "pas une date", "kwh": 20.0}):
+            data = r.charger_donnees(pour_modification=True)
+            data["recharges"].append(abimee)
+            with self.assertRaises(ValueError):
+                r.sauvegarder_donnees(data)
+            self.assertEqual(r.DATA_FILE.read_bytes(), avant)
+        self.assertEqual(list(DOSSIER_TEST.glob("*.tmp")), [])
 
     # --- les donnees ecrites sont bien celles du dossier temporaire -------
 
