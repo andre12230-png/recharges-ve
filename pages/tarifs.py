@@ -16,13 +16,14 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox, QPushButton,
                                QVBoxLayout, QWidget)
 
-from composants import carte, confirmer, paragraphe
+from composants import bandeau_alerte, carte, confirmer, paragraphe
 from constantes import CARTES
 from dialogue_km_frais import DialogueFrais
 from dialogue_tarif import DialogueTarif
 from erreurs import erreur_en_clair
 from recharges import (TYPES_FRAIS_CARTE, ajouter_frais_carte,
-                       charger_frais_cartes, charger_tarifs, recalculer_tout,
+                       charger_frais_cartes, charger_tarifs,
+                       recalcul_en_attente, recalculer_tout,
                        recharges_du_tarif, supprimer_frais_carte,
                        supprimer_tarif)
 from formats import fmt_date_fr, fmt_eur, fmt_prix_kwh
@@ -78,12 +79,39 @@ def question_suppression(t: dict, n_recharges: int) -> str:
 
 # ---------- affichage ----------
 
+def bandeau_recalcul(fenetre, apres) -> QFrame | None:
+    """Le rappel « coûts à recalculer », tant que la grille a changé sans
+    recalcul (audit à blanc du 03/11/2026, chantier C3), avec le bouton qui
+    recalcule ; None s'il n'y a rien à rappeler. `apres` reconstruit la page
+    une fois le recalcul fait : le bandeau disparaît alors de lui-même.
+    Partagé par la page Tarifs et le tableau de bord."""
+    if not recalcul_en_attente():
+        return None
+    cadre = bandeau_alerte(
+        "⚡ La grille tarifaire a changé depuis le dernier recalcul : le coût "
+        "des recharges à la maison déjà enregistrées n'en tient pas encore "
+        "compte.")
+    bouton = QPushButton("Recalculer tous les coûts")
+    bouton.clicked.connect(lambda: (recalculer_les_couts(fenetre), apres()))
+    ligne = QHBoxLayout()
+    ligne.addWidget(bouton)
+    ligne.addStretch(1)
+    cadre.layout().addLayout(ligne)
+    cadre.bouton = bouton                       # pour les tests
+    return cadre
+
+
 def construire(fenetre) -> QWidget:
     tarifs = charger_tarifs()
     page = QWidget()
     colonne = QVBoxLayout(page)
     colonne.setContentsMargins(0, 0, 0, 0)
     colonne.setSpacing(12)
+
+    page.rappel_recalcul = bandeau_recalcul(fenetre,
+                                            lambda: _recharger(fenetre))
+    if page.rappel_recalcul is not None:
+        colonne.addWidget(page.rappel_recalcul)
 
     cadre, corps = carte("Grille tarifaire")
     corps.addWidget(paragraphe(

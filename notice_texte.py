@@ -223,7 +223,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Recalculer les coûts",
          "Après un changement de grille, l'application propose de recalculer "
          "le coût des recharges maison ; le bouton « Recalculer tous les "
-         "coûts » le fait aussi plus tard. Chaque recharge reprend le prix "
+         "coûts » le fait aussi plus tard. Tant que ce n'est pas fait, un "
+         "bandeau orange le rappelle, sur la page Tarifs et sur le tableau "
+         "de bord. Chaque recharge reprend le prix "
          "de la période où elle a eu lieu : corriger une erreur de saisie "
          "dans une grille corrige donc ses recharges, sans toucher aux "
          "autres périodes."),

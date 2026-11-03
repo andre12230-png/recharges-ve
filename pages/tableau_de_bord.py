@@ -21,6 +21,7 @@ from pages.historique import cellules
 from filtres import (bornes_frais, bornes_periode, conseil_si_vide,
                      filtrer_par_periode)
 from pages.periode import BarrePeriode
+from pages.tarifs import bandeau_recalcul
 from recharges import (calculer_abonnement, calculer_consommation,
                        calculer_frais_cartes, charger_config,
                        comparer_essence_periode,
@@ -168,6 +169,12 @@ def construire(fenetre) -> QWidget:
     rappel = rappel_tarif_manquant(charger_tarifs())
     if rappel:
         colonne.addWidget(bandeau_alerte(rappel))
+    # La grille a changé sans recalcul (« Plus tard ») : les coûts affichés
+    # ici ne la suivent pas encore. En orange, avec le bouton (chantier C3).
+    page.rappel_recalcul = bandeau_recalcul(
+        fenetre, lambda: fenetre.afficher_vue("dashboard", forcer=True))
+    if page.rappel_recalcul is not None:
+        colonne.addWidget(page.rappel_recalcul)
 
     grille = QGridLayout()
     grille.setSpacing(8)

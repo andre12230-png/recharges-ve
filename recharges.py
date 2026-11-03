@@ -1508,6 +1508,7 @@ def enregistrer_tarif(tarif: dict, id_origine: str | None = None,
         tarifs.append(propre)
 
     contenu["tarifs"] = sorted(tarifs, key=lambda t: t["debut"])
+    _noter_recalcul_en_attente(contenu)
     _ecrire_tarifs(contenu)
     return _avertissements_grille(contenu["tarifs"])
 
@@ -1516,9 +1517,10 @@ def tarif_ouvert_avant(debut_iso: str, sauf_id: str | None = None) -> dict | Non
     """Tarif sans date de fin qui commence avant la date indiquee.
 
     C'est le piege classique quand les prix changent : on ajoute la nouvelle
-    periode sans fermer l'ancienne. Comme le calcul retient le PREMIER tarif
-    dont la periode contient la date, l'ancien (qui n'a pas de fin) continue
-    de tout absorber et le nouveau ne sert jamais.
+    periode sans fermer l'ancienne. Depuis le 26/10/2026 (et le 03/11 pour
+    l'abonnement), la periode la plus recente l'emporte : le nouveau tarif
+    s'applique quand meme, mais la grille se relit mieux sans
+    chevauchement. La fenetre du tarif propose donc de fermer l'ancien.
     """
     try:
         debut = datetime.fromisoformat(debut_iso).date()
@@ -1539,8 +1541,46 @@ def supprimer_tarif(id_tarif: str) -> bool:
                          if t.get("id") != id_tarif]
     if len(contenu["tarifs"]) == avant:
         return False
+    _noter_recalcul_en_attente(contenu)
     _ecrire_tarifs(contenu)
     return True
+
+
+# Rappel « coûts à recalculer » (audit à blanc du 03/11/2026, chantier C3).
+# Après un changement de grille, « Plus tard » laissait les coûts déjà
+# enregistrés sur l'ancienne grille, sans plus rien rappeler. Cette clé de
+# tarifs.json le retient jusqu'au prochain recalcul. Facultative (accord
+# d'André) : un fichier sans elle n'a rien à rappeler.
+CLE_RECALCUL_EN_ATTENTE = "recalcul_en_attente"
+
+
+def _noter_recalcul_en_attente(contenu: dict) -> None:
+    """La grille va changer : s'il existe des recharges à la maison, leur
+    coût ne la suivra pas avant un recalcul. Sans recharge (premier tarif
+    d'un nouvel utilisateur), il n'y a rien à rappeler."""
+    try:
+        a_recalculer = any(r.get("lieu") == "maison"
+                           for r in charger_donnees()["recharges"])
+    except (ValueError, OSError):
+        a_recalculer = True          # dans le doute, rappeler
+    if a_recalculer:
+        contenu[CLE_RECALCUL_EN_ATTENTE] = True
+
+
+def recalcul_en_attente() -> bool:
+    """Vrai si la grille a changé depuis le dernier recalcul des coûts."""
+    try:
+        return bool(_lire_tarifs_json().get(CLE_RECALCUL_EN_ATTENTE))
+    except (ValueError, OSError):
+        return False
+
+
+def _effacer_recalcul_en_attente() -> None:
+    """Après un recalcul : la clé est retirée (et non laissée à « false »),
+    le fichier redevient celui d'avant le rappel."""
+    contenu = _lire_tarifs_json()
+    if contenu.pop(CLE_RECALCUL_EN_ATTENTE, None) is not None:
+        _ecrire_tarifs(contenu)
 
 
 def recharges_du_tarif(id_tarif: str) -> int:
@@ -3685,6 +3725,8 @@ def recalculer_tout(puissance_kw: float | None = None) -> tuple[int, list[str]]:
         r["tarif_nom"] = calc["tarif_nom"]
         n += 1
     sauvegarder_donnees(data)
+    # Les coûts suivent de nouveau la grille : plus rien à rappeler.
+    _effacer_recalcul_en_attente()
     return n, laissees
 
 
