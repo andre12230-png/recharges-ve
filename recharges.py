@@ -5,8 +5,11 @@ Calcule le coût réel de chaque recharge selon les tarifs en vigueur
 """
 
 import calendar
+import contextlib
 import copy
 import csv
+import functools
+import hashlib
 import json
 import math
 import unicodedata
@@ -15,10 +18,19 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
+
+# Le verrou d'écriture commun au bureau et au téléphone (voir verrou_donnees) :
+# msvcrt sous Windows, fcntl ailleurs, tous deux livrés avec Python.
+try:
+    import msvcrt
+except ImportError:          # pas Windows
+    msvcrt = None
+    import fcntl
 
 import journal_erreurs
 from erreurs import erreur_en_clair
@@ -488,6 +500,105 @@ def _remplacer(tmp: str, cible: Path) -> None:
             time.sleep(PAUSE_ENTRE_ESSAIS)
 
 
+# ---------------------------------------------------------------------------
+# Un seul écrivain à la fois, bureau ou téléphone (audit à blanc du
+# 03/11/2026, chantier C2)
+# ---------------------------------------------------------------------------
+# L'application de bureau et le serveur du téléphone sont deux programmes qui
+# réécrivent tout recharges.json. Sans verrou commun, une écriture faite sur
+# une copie d'avant effaçait la recharge enregistrée entre-temps par l'autre
+# programme, sans un mot (reproduit par tests/test_verrou_ecriture.py).
+# Chaque fonction qui relit puis réécrit les recharges tient donc ce verrou
+# du début à la fin : l'autre programme attend son tour (quelques
+# millisecondes), puis relit le fichier à jour.
+#
+# C'est un verrou du système sur un petit fichier du dossier temporaire,
+# nommé d'après le dossier des données, comme le verrou « une seule
+# fenêtre » de fenetre.py : rien n'est posé à côté des données, et le
+# système le libère tout seul si un programme s'arrête net.
+
+ATTENTE_VERROU_S = 10.0     # au-delà, on renonce, avec un message
+
+
+class DonneesOccupees(OSError):
+    """Un autre programme enregistre les recharges depuis trop longtemps."""
+
+
+_verrou_local = threading.RLock()   # les fils d'un même programme
+_profondeur_verrou = 0              # verrou repris par une fonction appelée
+
+
+def _fichier_verrou() -> Path:
+    empreinte = hashlib.sha1(str(DATA_FILE.parent.resolve()).lower()
+                             .encode("utf-8")).hexdigest()[:12]
+    return Path(tempfile.gettempdir()) / f"recharges-ve-{empreinte}.ecriture"
+
+
+def _essayer_verrou(f) -> bool:
+    """Prend le verrou du système s'il est libre ; ne bloque jamais."""
+    try:
+        if msvcrt is not None:
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
+def _rendre_verrou(f) -> None:
+    if msvcrt is not None:
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def verrou_donnees():
+    """Tient le verrou d'écriture des recharges le temps du bloc `with`.
+
+    Repris sans blocage par une fonction appelée sous le même verrou
+    (réglages de la borne, puis recalcul). Si un autre programme le garde
+    plus de ATTENTE_VERROU_S secondes : DonneesOccupees, et rien n'est
+    écrit."""
+    global _profondeur_verrou
+    with _verrou_local:
+        if _profondeur_verrou:
+            _profondeur_verrou += 1
+            try:
+                yield
+            finally:
+                _profondeur_verrou -= 1
+            return
+        with open(_fichier_verrou(), "a+b") as f:
+            limite = time.monotonic() + ATTENTE_VERROU_S
+            while not _essayer_verrou(f):
+                if time.monotonic() >= limite:
+                    raise DonneesOccupees(
+                        "Les recharges sont en cours d'enregistrement par un "
+                        "autre programme (la saisie depuis le téléphone ?) : "
+                        "rien n'a été enregistré, réessayez dans un instant.")
+                time.sleep(0.05)
+            _profondeur_verrou = 1
+            try:
+                yield
+            finally:
+                _profondeur_verrou = 0
+                _rendre_verrou(f)
+
+
+def sous_verrou(fonction):
+    """Fait tenir toute la fonction (relire, modifier, écrire) sous le
+    verrou d'écriture des recharges."""
+    @functools.wraps(fonction)
+    def enveloppe(*args, **kwargs):
+        with verrou_donnees():
+            return fonction(*args, **kwargs)
+    return enveloppe
+
+
 def sauvegarder_donnees(data: dict) -> None:
     """Sauvegarde atomique : backup, écriture dans un fichier temporaire,
     fsync, puis remplacement atomique. Évite toute corruption en cas de crash.
@@ -563,6 +674,7 @@ def lister_backups() -> list[dict]:
     return fiches
 
 
+@sous_verrou
 def restaurer_backup(chemin: str | Path) -> int:
     """Remplace recharges.json par cette sauvegarde. Renvoie le nb de recharges.
 
@@ -1874,6 +1986,7 @@ def _prix_unitaire(cout_arrondi: float, kwh: float) -> float:
     return round(cout_arrondi / kwh, 4) if kwh else 0
 
 
+@sous_verrou
 def ajouter_recharge_maison(debut: datetime, fin: datetime | None, kwh: float,
                             cout_wallbox: float | None = None) -> dict:
     """Enregistre une recharge faite a la maison.
@@ -2003,6 +2116,7 @@ def lieu_canonique(texte: str) -> str:
     return propre
 
 
+@sous_verrou
 def ajouter_recharge_exterieur(kwh: float, cout: float, operateur: str = "",
                                lieu_detail: str = "", date: str | None = None,
                                carte: str = "") -> dict:
@@ -2165,6 +2279,7 @@ def recharge_maison_qui_chevauche(debut: datetime, fin: datetime | None,
     return None
 
 
+@sous_verrou
 def modifier_recharge(id_recharge: str, modifs: dict) -> dict:
     """Modifie une recharge existante par son id. Recalcule les coûts si maison."""
     data = charger_donnees(pour_modification=True)
@@ -2216,6 +2331,7 @@ def modifier_recharge(id_recharge: str, modifs: dict) -> dict:
     raise ValueError("Recharge introuvable")
 
 
+@sous_verrou
 def supprimer_recharge(id_recharge: str) -> bool:
     data = charger_donnees(pour_modification=True)
     avant = len(data["recharges"])
@@ -2448,6 +2564,7 @@ def _anniversaires(debut: date, jusqu_a: date):
         annee += 1
 
 
+@sous_verrou
 def assurer_ids() -> int:
     """Migration : ajoute un id aux recharges qui n'en ont pas."""
     data = charger_donnees(pour_modification=True)
@@ -2558,6 +2675,7 @@ def rappel_releve_km(seuil_jours: int = 30,
     return f"{phrase} {suite} à aucune distance."
 
 
+@sous_verrou
 def ajouter_releve_km(km: float, date: str | None = None,
                       conso: float | None = None) -> dict:
     """Enregistre un relevé du compteur kilométrique.
@@ -2582,6 +2700,7 @@ def ajouter_releve_km(km: float, date: str | None = None,
     return releve
 
 
+@sous_verrou
 def modifier_releve_km(id_releve: str, km: float, date: str,
                        conso: float | None = None) -> dict:
     """Corrige un relevé existant, sans changer son identifiant.
@@ -2651,6 +2770,7 @@ def conso_reference(releves: list[dict] | None = None) -> float:
     return 0.0
 
 
+@sous_verrou
 def supprimer_releve_km(id_releve: str) -> bool:
     data = charger_donnees(pour_modification=True)
     releves = data.get("releves_km", [])
@@ -3283,6 +3403,7 @@ def _n_lignes(n: int) -> str:
     return f"{n} ligne{'s' if n > 1 else ''}"
 
 
+@sous_verrou
 def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
                         correspondance: dict | None = None) -> dict:
     """Importe l'export d'une borne. Sans `correspondance`, le format
@@ -3521,6 +3642,7 @@ def _message_hors_grille(debuts: list[datetime], tarifs: list[dict]) -> str:
                     "ne sont pas enregistrées.")
 
 
+@sous_verrou
 def recalculer_tout(puissance_kw: float | None = None) -> tuple[int, list[str]]:
     """Recalcule le coût de toutes les recharges maison à partir des tarifs courants.
 
@@ -3566,6 +3688,7 @@ def recalculer_tout(puissance_kw: float | None = None) -> tuple[int, list[str]]:
     return n, laissees
 
 
+@sous_verrou
 def enregistrer_reglages_borne(reglages: dict) -> dict:
     """Enregistre les réglages de la page Paramètres et, si la correction
     d'horloge change, replace les recharges déjà importées d'un CSV.
