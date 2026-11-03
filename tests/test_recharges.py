@@ -417,6 +417,38 @@ class TestCalculerAbonnement(unittest.TestCase):
         self.assertAlmostEqual(res["total"], 1.00, places=2)
         self.assertEqual(res["jours"], 1)
 
+    def test_chevauchement_la_periode_la_plus_recente_l_emporte(self):
+        """Un ancien tarif laisse sans date de fin, puis un plus recent :
+        a partir du 01/06, le kWh est compte au plus recent (_trouver_tarif),
+        l'abonnement doit l'etre aussi. Il restait a l'ancien, le premier
+        dans l'ordre du fichier (audit a blanc du 03/11/2026)."""
+        ancien = tarif_simple(0.10, debut="2026-01-01", fin=None,
+                              nom="Ancien", abonnement=10.0, id_tarif="t_a")
+        nouveau = tarif_simple(0.30, debut="2026-06-01", fin=None,
+                               nom="Nouveau", abonnement=20.0, id_tarif="t_b")
+        for tarifs in ([ancien, nouveau], [nouveau, ancien]):
+            res = r.calculer_abonnement(date(2026, 6, 1), date(2026, 6, 30),
+                                        tarifs)
+            self.assertEqual(res["par_tarif"], {"Nouveau": 20.0})
+            self.assertAlmostEqual(res["total"], 20.00, places=2)
+        # Et le meme tarif que pour le kWh, le meme jour.
+        kwh = r._trouver_tarif(datetime(2026, 6, 15, 12), [ancien, nouveau])
+        self.assertEqual(kwh["nom"], "Nouveau")
+
+    def test_exception_courte_dans_une_longue_periode(self):
+        """Une periode d'exception (juin) posee dans une periode d'un an :
+        mai et juillet a l'annuel, juin a l'exception — puis l'annuel
+        reprend la main apres la fin de l'exception."""
+        annuel = tarif_simple(0.10, debut="2026-01-01", fin="2026-12-31",
+                              nom="Annuel", abonnement=10.0, id_tarif="t_l")
+        juin = tarif_simple(0.30, debut="2026-06-01", fin="2026-06-30",
+                            nom="Juin", abonnement=20.0, id_tarif="t_e")
+        res = r.calculer_abonnement(date(2026, 5, 1), date(2026, 7, 31),
+                                    [annuel, juin])
+        self.assertAlmostEqual(res["par_tarif"]["Annuel"], 20.00, places=2)
+        self.assertAlmostEqual(res["par_tarif"]["Juin"], 20.00, places=2)
+        self.assertAlmostEqual(res["total"], 40.00, places=2)
+
 
 # ---------------------------------------------------------------------------
 # lecture de tarifs.json et import CSV : ces tests ecrivent des fichiers,

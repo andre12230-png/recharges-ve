@@ -2174,17 +2174,28 @@ def supprimer_recharge(id_recharge: str) -> bool:
 def _tarif_du_jour(jour: date, tarifs: list[dict]) -> tuple[dict | None, date]:
     """Le tarif applicable ce jour-là, et son dernier jour d'application.
 
+    Même règle que pour le prix du kWh (_trouver_tarif) : si plusieurs
+    périodes couvrent ce jour, la plus récente l'emporte. L'abonnement
+    prenait la première dans l'ordre du fichier, et pouvait donc venir
+    d'une autre période que le kWh (audit à blanc du 03/11/2026).
+
     Un tarif sans date de fin est celui en cours : il court jusqu'à nouvel
     ordre (date.max). L'arrêter à aujourd'hui ferait disparaître les jours
     restants du mois quand on demande le mois entier.
     """
-    for t in tarifs:
-        t_debut = datetime.fromisoformat(t["debut"]).date()
-        t_fin = (datetime.fromisoformat(t["fin"]).date()
-                 if t.get("fin") else date.max)
-        if t_debut <= jour <= t_fin:
-            return t, t_fin
-    return None, date.max
+    tarif = _trouver_tarif(datetime(jour.year, jour.month, jour.day), tarifs)
+    if tarif is None:
+        return None, date.max
+    t_debut = datetime.fromisoformat(tarif["debut"]).date()
+    t_fin = (datetime.fromisoformat(tarif["fin"]).date()
+             if tarif.get("fin") else date.max)
+    # Une période plus récente qui commence plus tard reprend la main ce
+    # jour-là : la tranche s'arrête la veille de son début.
+    for autre in tarifs:
+        a_debut = datetime.fromisoformat(autre["debut"]).date()
+        if t_debut < a_debut and jour < a_debut <= t_fin:
+            t_fin = a_debut - timedelta(days=1)
+    return tarif, t_fin
 
 
 def calculer_abonnement(date_debut: date, date_fin: date,

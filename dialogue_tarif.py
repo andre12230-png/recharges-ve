@@ -229,21 +229,25 @@ class DialogueTarif(QDialog):
             self._message(erreur_en_clair(e))
             return
 
-        # Nouvelle periode : le tarif precedent doit etre ferme, sinon il
-        # continue de s'appliquer et le nouveau ne sert a rien.
+        # Nouvelle periode : proposer de fermer le tarif precedent. Depuis le
+        # 26/10/2026, la periode la plus recente l'emporte (kWh et, depuis le
+        # 03/11/2026, abonnement) : le nouveau tarif s'applique de toute
+        # facon, mais une grille sans chevauchement se relit mieux.
         ouvert = tarif_ouvert_avant(tarif["debut"], self.id_origine)
         a_cloturer = None
         try:
             if ouvert and not self.id_origine:
-                veille = (datetime.fromisoformat(tarif["debut"])
-                          - timedelta(days=1)).strftime("%d/%m/%Y")
+                debut = datetime.fromisoformat(tarif["debut"])
+                veille = (debut - timedelta(days=1)).strftime("%d/%m/%Y")
                 # L'action est proposee par defaut : elle ne detruit rien,
-                # et sans elle le nouveau tarif ne servirait jamais.
+                # et la grille reste claire.
                 if confirmer(
                         self, "Fermer le tarif précédent ?",
-                        f"« {ouvert['nom']} » n'a pas de date de fin : sans "
-                        "quoi il continuerait de s'appliquer et votre nouveau "
-                        "tarif ne servirait jamais.\n\n"
+                        f"« {ouvert['nom']} » n'a pas de date de fin. Votre "
+                        "nouveau tarif s'appliquera quand même à partir du "
+                        f"{debut:%d/%m/%Y} (la période la plus récente "
+                        "l'emporte), mais la grille est plus claire si "
+                        "l'ancien s'arrête la veille.\n\n"
                         f"Voulez-vous le terminer le {veille} ?",
                         action=f"Le terminer le {veille}",
                         garder="Le laisser ouvert", action_par_defaut=True):
