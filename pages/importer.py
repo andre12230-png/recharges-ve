@@ -64,6 +64,24 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
                   if n == 1 else
                   f"\nATTENTION : {n} lignes non reconnues, donc pas "
                   "enregistrées.")
+    # Les sessions au-delà de ce que la batterie peut absorber (des Wh lus
+    # comme des kWh, par exemple) : mises de côté par le moteur, listées
+    # ici une par ligne, en orange (décision d'André du 03/11/2026).
+    trop = res.get("trop_kwh") or []
+    if trop:
+        alerte = True
+        if len(trop) == 1:
+            texte += ("\nATTENTION : 1 session mise de côté, donc pas "
+                      "enregistrée : son énergie dépasse ce que la batterie "
+                      "peut absorber en une charge.")
+        else:
+            texte += (f"\nATTENTION : {len(trop)} sessions mises de côté, "
+                      "donc pas enregistrées : leur énergie dépasse ce que la "
+                      "batterie peut absorber en une charge.")
+        texte += (" Vérifiez la capacité de la batterie dans Paramètres ; si "
+                  "une recharge est réelle, saisissez-la à la main :")
+        for t in trop:
+            texte += f"\n  • {fmt_date_fr(t['date'])}, {fmt_kwh(t['kwh'])}"
     return texte, alerte
 
 

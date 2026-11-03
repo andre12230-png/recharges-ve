@@ -1827,6 +1827,22 @@ def _nouvel_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+def energie_maximale_par_charge(config: dict | None = None) -> float | None:
+    """Ce que la batterie peut absorber en une seule charge, pris a la prise
+    (capacite / rendement), ou None si la capacite n'est pas renseignee.
+
+    Une seule regle pour la question « Energie inhabituelle » de la saisie
+    et pour l'import, qui met de cote une session au-dela (decision d'Andre
+    du 03/11/2026)."""
+    if config is None:
+        config = charger_config()
+    capacite = config["capacite_batterie"]
+    rendement = config["rendement_charge"]
+    if capacite <= 0 or not 0 < rendement <= 1:
+        return None        # capacite inconnue : on ne peut rien affirmer
+    return capacite / rendement
+
+
 def energie_invraisemblable(kwh: float) -> str:
     """Explique pourquoi une energie saisie est impossible, sinon chaine vide.
 
@@ -1838,10 +1854,8 @@ def energie_invraisemblable(kwh: float) -> str:
     config = charger_config()
     capacite = config["capacite_batterie"]
     rendement = config["rendement_charge"]
-    if capacite <= 0 or not 0 < rendement <= 1 or kwh <= 0:
-        return ""          # capacite inconnue : on ne peut rien affirmer
-    maximum = capacite / rendement
-    if kwh <= maximum:
+    maximum = energie_maximale_par_charge(config)
+    if maximum is None or kwh <= 0 or kwh <= maximum:
         return ""
     return (f"{fmt_kwh(kwh)} dépasse ce que votre batterie peut absorber en "
             f"une seule charge : {fmt_nombre(capacite, 1)}\xa0kWh, soit "
@@ -3351,6 +3365,12 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
     parasites = 0
     completees = 0      # anciennes recharges qui reçoivent l'heure de borne
     hors_grille: list[datetime] = []   # débuts qu'aucun tarif ne couvre
+    # Sessions au-delà de ce que la batterie peut absorber en une charge
+    # (des Wh lus comme des kWh, par exemple) : mises de côté, PAS
+    # enregistrées, et listées dans le compte rendu (décision d'André du
+    # 03/11/2026). Avant, elles entraient dans les données sans un mot.
+    trop_kwh: list[dict] = []
+    energie_max = energie_maximale_par_charge(config)
 
     for serial, s_debut, s_fin, kwh_str, duree, cout_str in records:
         kwh = float(kwh_str)
@@ -3394,6 +3414,13 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
                 proche["debut_borne"] = debut_borne.isoformat(
                     timespec="seconds")
                 completees += 1
+            continue
+
+        # Après le contrôle des doublons : une session déjà enregistrée n'est
+        # pas signalée à chaque nouvel import du même fichier.
+        if energie_max is not None and kwh > energie_max:
+            trop_kwh.append({"date": debut.isoformat(timespec="minutes"),
+                             "kwh": round(kwh, 3)})
             continue
 
         # Une recharge qu'aucun tarif ne couvre (typiquement : un historique
@@ -3463,7 +3490,7 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         sauvegarder_donnees(data)
     return {"total_lus": len(records), "ajoutes": ajoutes, "doublons": doublons,
             "remplaces": remplaces, "remplacements": remplacements,
-            "zero_kwh": zero_kwh,
+            "zero_kwh": zero_kwh, "trop_kwh": trop_kwh,
             "parasites": parasites, "non_reconnues": non_reconnues}
 
 

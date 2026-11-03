@@ -1007,6 +1007,36 @@ class TestFichiers(unittest.TestCase):
         self.assertEqual(res["ajoutes"], 1)
         self.assertEqual(res["parasites"], 1)
 
+    # --- energie impossible a l'import (decision d'Andre du 03/11/2026) ----
+
+    LIGNE_20_KWH = ("TACW000000S0000,2026-03-05 23:00:00,2026-03-06 05:00:00,"
+                    "20.000kWh,06h00min,2.60€")
+    # Des Wh lus comme des kWh : 12 500 « kWh » pour une nuit.
+    LIGNE_12500_KWH = ("TACW000000S0000,2026-03-07 23:00:00,"
+                       "2026-03-08 05:00:00,12500.000kWh,06h00min,2.60€")
+
+    def test_import_met_de_cote_une_energie_au_dela_de_la_batterie(self):
+        """Batterie de 50 kWh, rendement 90 % : 55,6 kWh au plus par charge.
+        La ligne a 12 500 kWh n'est pas enregistree : elle est mise de cote
+        et listee. Avant, elle entrait dans les donnees sans un mot."""
+        res = r.importer_csv_maison(self.ecrire_csv([self.LIGNE_20_KWH,
+                                                     self.LIGNE_12500_KWH]))
+        self.assertEqual(res["ajoutes"], 1)
+        self.assertEqual(res["trop_kwh"],
+                         [{"date": "2026-03-07T23:00", "kwh": 12500.0}])
+        self.assertEqual(
+            [x["kwh"] for x in r.charger_donnees()["recharges"]], [20.0])
+
+    def test_import_sans_capacite_connue_ne_met_rien_de_cote(self):
+        """Capacite non renseignee : on ne peut rien affirmer, comme pour la
+        question « Energie inhabituelle » a la saisie."""
+        contenu = json.loads(r.TARIFS_FILE.read_text(encoding="utf-8"))
+        contenu["capacite_batterie"] = 0
+        self.ecrire_tarifs(contenu)
+        res = r.importer_csv_maison(self.ecrire_csv([self.LIGNE_12500_KWH]))
+        self.assertEqual(res["ajoutes"], 1)
+        self.assertEqual(res["trop_kwh"], [])
+
     # --- ce qui est ecrit doit pouvoir etre relu (audit a blanc, 03/11) ---
 
     def test_une_valeur_infinie_n_est_jamais_ecrite(self):

@@ -311,6 +311,21 @@ def test_compte_rendu_d_import():
     assert "rien de nouveau" not in texte
 
 
+def test_compte_rendu_liste_les_sessions_mises_de_cote():
+    """Une session au-dela de ce que la batterie peut absorber n'est pas
+    enregistree : le compte rendu la liste, en orange, et dit quoi faire
+    (decision d'Andre du 03/11/2026)."""
+    res = {"ajoutes": 1, "remplaces": 0, "doublons": 0, "zero_kwh": 0,
+           "parasites": 0, "total_lus": 2,
+           "trop_kwh": [{"date": "2026-03-07T23:00", "kwh": 12500.0}]}
+    texte, alerte = im.texte_resultat(res)
+    assert alerte
+    assert "ATTENTION : 1 session mise de côté, donc pas enregistrée" in texte
+    assert "07/03/2026 23:00, 12\xa0500,00\xa0kWh" in texte
+    deux, _ = im.texte_resultat(dict(res, trop_kwh=res["trop_kwh"] * 2))
+    assert "ATTENTION : 2 sessions mises de côté, donc pas enregistrées" in deux
+
+
 def test_page_importer(fenetre, monkeypatch, tmp_path):
     (tmp_path / "borne.csv").write_text("x", encoding="utf-8")
     monkeypatch.setattr(im, "dossier_donnees", lambda: tmp_path)
