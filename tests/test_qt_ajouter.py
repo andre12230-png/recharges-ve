@@ -173,7 +173,11 @@ def test_enregistrement_maison(page, moteur):
     m.bouton.click()
     assert moteur["maison"] == [(datetime(2026, 9, 24, 22, 30),
                                  datetime(2026, 9, 25, 4, 42), 20.5)]
-    assert m.resultat.text().startswith("✓ 15,00\xa0kWh HC + 5,00\xa0kWh HP")
+    # La date et l'heure enregistrees sont rappelees : une date restee a
+    # « maintenant » par megarde se voit tout de suite (audit a blanc du
+    # 03/11/2026).
+    assert m.resultat.text().startswith(
+        "✓ Recharge du 24/09/2026 à 22:30 : 15,00\xa0kWh HC + 5,00\xa0kWh HP")
     assert "(Mon contrat)" in m.resultat.text()
     assert VERT in m.resultat.styleSheet()
     # Formulaire remis a zero : un second clic ne cree pas de doublon.
@@ -251,7 +255,9 @@ def test_enregistrement_exterieur(page, moteur):
         "kwh": 30.0, "cout": 18.0, "operateur": "Ionity",
         "lieu_detail": "Aire de l'Exemple (A0)", "date": "2026-09-24T14:05",
         "carte": "Direct (CB)"}]
-    assert e.resultat.text() == "✓ 18,00\xa0€  (0,6000\xa0€/kWh)"
+    assert e.resultat.text() == (
+        "✓ Recharge du 24/09/2026 à 14:05, Ionity, Aire de l'Exemple (A0) : "
+        "18,00\xa0€  (0,6000\xa0€/kWh)")
     # Chiffres et lieu vides ; operateur et carte gardes.
     assert e.texte("champ_e_kwh") == e.texte("champ_e_prix") == ""
     assert e.texte("champ_e_lieu") == ""
@@ -265,6 +271,17 @@ def test_exterieur_deux_cases_vides_de_date(page, moteur):
     remplir(e, champ_e_kwh="30", champ_e_cout="18")
     e.bouton.click()
     assert moteur["exterieur"][0]["date"] is None   # le moteur date de maintenant
+    # Le message rappelle la date que le moteur a reellement enregistree.
+    assert e.resultat.text().startswith("✓ Recharge du 25/09/2026 à 12:00")
+
+
+def test_exterieur_sans_operateur_ni_lieu(page, moteur):
+    e = page.exterieur
+    remplir(e, champ_e_date_jour="24/09/2026", champ_e_date_heure="14h05",
+            champ_e_kwh="30", champ_e_cout="18", champ_e_operateur="")
+    e.bouton.click()
+    assert e.resultat.text() == (
+        "✓ Recharge du 24/09/2026 à 14:05 : 18,00\xa0€  (0,6000\xa0€/kWh)")
 
 
 def test_exterieur_une_seule_case_chiffree(page, moteur):

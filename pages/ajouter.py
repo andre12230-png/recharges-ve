@@ -8,6 +8,8 @@ les questions de garde-fou, puis enregistre.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QLabel, QPushButton, QSizePolicy, QTabWidget,
                                QVBoxLayout, QWidget)
@@ -161,6 +163,18 @@ def _resultat(f: Formulaire, texte: str, ok: bool) -> None:
     f.resultat.setStyleSheet(f"color: {VERT if ok else ROUGE};")
 
 
+def _recharge_du(iso: str) -> str:
+    """« Recharge du 24/09/2026 à 22:30 » : la date et l'heure que le moteur
+    a enregistrees, rappelees au debut du message de succes. Une date restee
+    a « maintenant » par megarde se voit ainsi tout de suite (audit a blanc
+    du 03/11/2026)."""
+    try:
+        quand = datetime.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return "Recharge enregistrée"
+    return f"Recharge du {quand:%d/%m/%Y} à {quand:%H:%M}"
+
+
 def noter_le_compteur(km: float | None, quand: str) -> tuple[str, bool]:
     """Enregistre le releve facultatif saisi avec la recharge.
 
@@ -215,8 +229,9 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
     note, releve_pris = noter_le_compteur(lu["km"], r["date"])
     if lu["km"] is not None and releve_pris:
         f.vider("champ_m_km")
-    _resultat(f, f"✓ {fmt_kwh(r['kwh_hc'])} HC + {fmt_kwh(r['kwh_hp'])} HP"
-                 f" = {fmt_eur(r['cout_eur'])}  ({r['tarif_nom']}){note}",
+    _resultat(f, f"✓ {_recharge_du(r['date'])} : {fmt_kwh(r['kwh_hc'])} HC"
+                 f" + {fmt_kwh(r['kwh_hp'])} HP = {fmt_eur(r['cout_eur'])}"
+                 f"  ({r['tarif_nom']}){note}",
               ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     f.mettre_maintenant("champ_m_debut")
@@ -243,11 +258,13 @@ def enregistrer_exterieur(fenetre, f: Formulaire) -> None:
             if lu["date"] is not None else None)
     if not confirmer_horodatage(fenetre, date):
         return
+    operateur = f.texte("champ_e_operateur").strip()
+    lieu = f.texte("champ_e_lieu").strip()
     try:
         r = ajouter_recharge_exterieur(
             lu["kwh"], lu["cout"],
-            operateur=f.texte("champ_e_operateur").strip(),
-            lieu_detail=f.texte("champ_e_lieu").strip(),
+            operateur=operateur,
+            lieu_detail=lieu,
             date=date,
             carte=f.texte("champ_e_carte").strip())
     except (ValueError, OSError) as e:
@@ -256,7 +273,11 @@ def enregistrer_exterieur(fenetre, f: Formulaire) -> None:
     note, releve_pris = noter_le_compteur(lu["km"], r["date"])
     if lu["km"] is not None and releve_pris:
         f.vider("champ_e_km")
-    _resultat(f, f"✓ {fmt_eur(r['cout_eur'])}  "
+    # Date, operateur et lieu rappeles : ils ne se voient plus une fois le
+    # formulaire vide (le lieu est efface, la date remise a maintenant).
+    qui = ", ".join(x for x in (operateur, lieu) if x)
+    entete = _recharge_du(r["date"]) + (f", {qui}" if qui else "")
+    _resultat(f, f"✓ {entete} : {fmt_eur(r['cout_eur'])}  "
                  f"({fmt_prix_kwh(r['prix_kwh'])}){note}", ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     # Operateur et carte restent : on recharge souvent au meme reseau.
