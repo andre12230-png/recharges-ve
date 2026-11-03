@@ -74,6 +74,8 @@ def moteur(monkeypatch):
     monkeypatch.setattr(formulaire, "energie_invraisemblable", lambda kwh: "")
     monkeypatch.setattr(formulaire, "horodatage_deja_utilise",
                         lambda date: None)
+    monkeypatch.setattr(formulaire, "recharge_maison_qui_chevauche",
+                        lambda debut, fin: None)
     return appels
 
 
@@ -231,6 +233,38 @@ def test_energie_invraisemblable_non_par_defaut(page, moteur, monkeypatch):
     m.bouton.click()
     assert moteur["questions"] == ["Énergie inhabituelle"]
     assert moteur["maison"] == []
+    moteur["reponse"] = True
+    m.bouton.click()
+    assert len(moteur["maison"]) == 1
+
+
+def test_doublon_maison_demande_confirmation(page, moteur, monkeypatch):
+    """La meme recharge maison saisie deux fois passait sans un mot (vu en
+    direct le 03/11/2026). Maintenant : une question qui montre l'autre
+    recharge, avec « Corriger » par defaut."""
+    questions = []
+
+    def demander(parent, titre, texte, *, oui_par_defaut, **_boutons):
+        questions.append((titre, texte, oui_par_defaut))
+        return moteur.get("reponse", True)
+
+    monkeypatch.setattr(formulaire, "_demander", demander)
+    monkeypatch.setattr(formulaire, "recharge_maison_qui_chevauche",
+                        lambda debut, fin: {
+                            "date": "2026-09-24T22:30",
+                            "fin": "2026-09-25T04:42", "kwh": 20.5,
+                            "lieu": "maison"})
+    moteur["reponse"] = False
+    m = page.maison
+    remplir(m, champ_m_debut_jour="24/09/2026", champ_m_debut_heure="22h30",
+            champ_m_fin_heure="+6h12", champ_m_kwh="20,5")
+    m.bouton.click()
+    titre, texte, oui_par_defaut = questions[0]
+    assert titre == "Recharge déjà enregistrée"
+    assert "24/09/2026 de 22:30 à 04:42" in texte
+    assert oui_par_defaut is False                  # « Corriger » par defaut
+    assert moteur["maison"] == []
+    assert m.texte("champ_m_kwh") == "20,5"         # rien n'est perdu
     moteur["reponse"] = True
     m.bouton.click()
     assert len(moteur["maison"]) == 1

@@ -759,6 +759,51 @@ class TestFichiers(unittest.TestCase):
         self.assertIsNone(r.horodatage_deja_utilise("2026-07-15T12:00",
                                                     sauf_id="e1"))
 
+    # --- doublon a la maison (audit a blanc du 03/11/2026) ------------------
+    # A la maison, la voiture ne recharge pas deux fois en meme temps : meme
+    # debut ou horaires qui se chevauchent = recharge saisie deux fois. Vu en
+    # direct le 03/11 : l'onglet Maison enregistrait le doublon sans un mot.
+
+    def test_chevauchement_maison(self):
+        r.ajouter_recharge_maison(datetime(2026, 3, 2, 22, 0),
+                                  datetime(2026, 3, 3, 1, 0), 20.0)
+        chevauche = r.recharge_maison_qui_chevauche
+        # Meme debut, avec ou sans heure de fin
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 2, 22, 0),
+                                       datetime(2026, 3, 3, 1, 0)))
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 2, 22, 0), None))
+        # Horaires qui se chevauchent, ou debut pendant l'autre recharge
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 2, 23, 30),
+                                       datetime(2026, 3, 3, 4, 0)))
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 3, 0, 15), None))
+        # Bout a bout, ou un autre jour : rien a dire
+        self.assertIsNone(chevauche(datetime(2026, 3, 3, 1, 0),
+                                    datetime(2026, 3, 3, 5, 0)))
+        self.assertIsNone(chevauche(datetime(2026, 3, 4, 22, 0),
+                                    datetime(2026, 3, 5, 1, 0)))
+
+    def test_chevauchement_maison_ignore_l_exterieur_et_elle_meme(self):
+        r.ajouter_recharge_exterieur(30.0, 15.0, operateur="Borne",
+                                     date="2026-03-02T22:00")
+        self.assertIsNone(r.recharge_maison_qui_chevauche(
+            datetime(2026, 3, 2, 22, 0), None))
+        rec = r.ajouter_recharge_maison(datetime(2026, 3, 2, 22, 0),
+                                        datetime(2026, 3, 3, 1, 0), 20.0)
+        self.assertIsNone(r.recharge_maison_qui_chevauche(
+            datetime(2026, 3, 2, 22, 0), None, sauf_id=rec["id"]))
+
+    def test_chevauchement_avec_une_recharge_sans_heure_de_fin(self):
+        """Sans heure de fin (tarif a prix unique), une recharge compte
+        comme un instant : son debut."""
+        r.sauvegarder_donnees({"recharges": [
+            {"id": "m1", "date": "2026-03-02T22:00", "lieu": "maison",
+             "kwh": 20.0}]})
+        chevauche = r.recharge_maison_qui_chevauche
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 2, 22, 0), None))
+        self.assertIsNotNone(chevauche(datetime(2026, 3, 2, 21, 0),
+                                       datetime(2026, 3, 2, 23, 0)))
+        self.assertIsNone(chevauche(datetime(2026, 3, 2, 22, 30), None))
+
     # --- lister et restaurer les sauvegardes (§ 6.6) ----------------------
 
     def sauvegarder_n_recharges(self, n):

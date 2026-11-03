@@ -15,7 +15,8 @@ from PySide6.QtWidgets import (QLabel, QPushButton, QSizePolicy, QTabWidget,
                                QVBoxLayout, QWidget)
 
 from constantes import CARTES, OPERATEURS
-from formulaire import Formulaire, confirmer_energie, confirmer_horodatage
+from formulaire import (Formulaire, confirmer_chevauchement_maison,
+                        confirmer_energie, confirmer_horodatage)
 from erreurs import erreur_en_clair
 from recharges import (ajouter_recharge_exterieur, ajouter_recharge_maison,
                        ajouter_releve_km, dernier_choix_exterieur,
@@ -217,6 +218,10 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
         f.erreur(e.champ, e.message)
         return
     if not confirmer_energie(fenetre, lu["kwh"]):
+        return
+    # La meme recharge saisie deux fois passait sans un mot (audit a blanc
+    # du 03/11/2026) ; l'onglet Exterieur, lui, avertissait deja.
+    if not confirmer_chevauchement_maison(fenetre, lu["debut"], lu["fin"]):
         return
     try:
         r = ajouter_recharge_maison(lu["debut"], lu["fin"], lu["kwh"])

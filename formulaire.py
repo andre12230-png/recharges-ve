@@ -24,7 +24,8 @@ from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QLineEdit,
                                QPushButton, QVBoxLayout, QWidget)
 
 from composants import confirmer
-from recharges import energie_invraisemblable, horodatage_deja_utilise
+from recharges import (energie_invraisemblable, horodatage_deja_utilise,
+                       recharge_maison_qui_chevauche)
 
 
 INVITE_A_SAISIR = "à saisir"
@@ -280,6 +281,36 @@ def confirmer_energie(parent: QWidget, kwh: float) -> bool:
         parent, "Énergie inhabituelle",
         f"{souci}\n\nC'est probablement une faute de frappe.\n\n"
         "Voulez-vous quand même enregistrer cette valeur ?",
+        oui_par_defaut=False, action="Enregistrer quand même",
+        garder="Corriger")
+
+
+def confirmer_chevauchement_maison(parent: QWidget, debut: datetime,
+                                   fin: datetime | None) -> bool:
+    """Avertit si une recharge a la maison est deja enregistree sur ces
+    horaires. Rend True s'il faut enregistrer.
+
+    A la maison, deux recharges ne peuvent pas avoir lieu en meme temps :
+    c'est presque toujours la meme, saisie deux fois. D'ou « Corriger » par
+    defaut, a l'inverse de l'exterieur ou deux recharges le meme jour sont
+    normales (audit a blanc du 03/11/2026)."""
+    autre = recharge_maison_qui_chevauche(debut, fin)
+    if autre is None:
+        return True
+    a_debut = datetime.fromisoformat(autre["date"])
+    if autre.get("fin"):
+        a_fin = datetime.fromisoformat(autre["fin"])
+        quand = f"le {a_debut:%d/%m/%Y} de {a_debut:%H:%M} à {a_fin:%H:%M}"
+    else:
+        quand = f"le {a_debut:%d/%m/%Y} à {a_debut:%H:%M}"
+    kwh = f"{autre.get('kwh', 0):.2f}".replace(".", ",")
+    return _demander(
+        parent, "Recharge déjà enregistrée",
+        f"Une recharge à la maison est déjà enregistrée {quand} "
+        f"({kwh}\xa0kWh).\n\n"
+        "La voiture ne peut pas recharger deux fois en même temps à la "
+        "maison : c'est sans doute la même recharge, saisie deux fois.\n\n"
+        "Voulez-vous quand même l'enregistrer ?",
         oui_par_defaut=False, action="Enregistrer quand même",
         garder="Corriger")
 

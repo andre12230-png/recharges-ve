@@ -2125,6 +2125,32 @@ def horodatage_deja_utilise(date_iso: str | None,
     return None
 
 
+def recharge_maison_qui_chevauche(debut: datetime, fin: datetime | None,
+                                  sauf_id: str | None = None) -> dict | None:
+    """La recharge à la maison déjà enregistrée qui commence à la même heure
+    ou dont les horaires chevauchent [debut, fin], sinon None.
+
+    À la maison, la voiture ne peut pas recharger deux fois en même temps :
+    un chevauchement est presque toujours une recharge saisie deux fois.
+    Une recharge sans heure de fin compte comme un instant (son début), et
+    deux recharges bout à bout (l'une finit quand l'autre commence) ne se
+    chevauchent pas. Avant le 03/11/2026, l'onglet Maison ne prévenait de
+    rien (audit à blanc).
+    """
+    fin = fin or debut
+    for r in charger_donnees()["recharges"]:
+        if r.get("lieu") != "maison" or r.get("id") == sauf_id:
+            continue
+        try:
+            r_debut = _parse_dt(r["date"])
+            r_fin = _parse_dt(r["fin"]) if r.get("fin") else r_debut
+        except (KeyError, ValueError):
+            continue
+        if r_debut == debut or (debut < r_fin and r_debut < fin):
+            return r
+    return None
+
+
 def modifier_recharge(id_recharge: str, modifs: dict) -> dict:
     """Modifie une recharge existante par son id. Recalcule les coûts si maison."""
     data = charger_donnees(pour_modification=True)
