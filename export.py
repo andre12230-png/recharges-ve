@@ -37,7 +37,7 @@ def _jour(iso: str) -> str:
 def lignes_detail(recharges: list[dict]) -> list[list[str]]:
     """Le tableau « Détail des recharges » du PDF, entete compris, de la
     plus ancienne a la plus recente."""
-    lignes = [["Date", "Lieu", "kWh", "Coût (EUR)", "EUR/kWh",
+    lignes = [["Date", "Lieu", "kWh", "Coût (€)", "€/kWh",
                "Tarif / Opérateur"]]
     for r in sorted(recharges, key=lambda x: x.get("date", "")):
         maison = r.get("lieu") == "maison"
@@ -110,7 +110,7 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
     ws = wb.active
     ws.title = "Recharges"
 
-    entetes = ["Date", "Lieu", "kWh", "Coût (EUR)", "EUR/kWh",
+    entetes = ["Date", "Lieu", "kWh", "Coût (€)", "€/kWh",
                "Tarif / Opérateur", "Carte", "Détail lieu", "kWh HC", "kWh HP"]
     ws.append(entetes)
 
@@ -196,26 +196,26 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
         ("GLOBAL", ""),
         ("Nombre de recharges", st["n"]),
         ("Énergie totale (kWh)", round(st["kwh"], 2)),
-        ("Coût total (EUR)", round(st["cout"], 2)),
-        ("Prix moyen (EUR/kWh)",
+        ("Coût total (€)", round(st["cout"], 2)),
+        ("Prix moyen (€/kWh)",
          round(st["cout"] / st["kwh"], 4) if st["kwh"] else 0),
         ("", ""),
         ("MAISON", ""),
         ("Recharges", st["maison"]["n"]),
         ("kWh", round(st["maison"]["kwh"], 2)),
-        ("Coût (EUR)", round(st["maison"]["cout"], 2)),
+        ("Coût (€)", round(st["maison"]["cout"], 2)),
         ("", ""),
         ("EXTÉRIEUR", ""),
         ("Recharges", st["ext"]["n"]),
         ("kWh", round(st["ext"]["kwh"], 2)),
-        ("Coût (EUR)", round(st["ext"]["cout"], 2)),
+        ("Coût (€)", round(st["ext"]["cout"], 2)),
     ]
     complements = complements or {}
     if complements.get("abonnement") is not None:
         lignes += [
             ("", ""),
             ("ABONNEMENT", ""),
-            ("Abonnement électricité de la période (EUR)",
+            ("Abonnement électricité de la période (€)",
              round(complements["abonnement"], 2)),
             ("À part : il n'entre ni dans le coût des recharges ni dans le "
              "prix du kWh.", ""),
@@ -224,7 +224,7 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
         lignes += [
             ("", ""),
             ("CARTES DE RECHARGE", ""),
-            ("Frais de cartes de recharge de la période (EUR)",
+            ("Frais de cartes de recharge de la période (€)",
              round(complements["frais_cartes"], 2)),
             ("Achats de cartes et abonnements : à part, eux aussi.", ""),
         ]
@@ -236,8 +236,8 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
             ("Entre vos relevés du compteur",
              f"du {_jour(km['debut'])} au {_jour(km['fin'])}"),
             ("Distance parcourue (km)", km["km"]),
-            ("Coût des recharges (EUR)", km["cout"]),
-            ("Coût aux 100\xa0km (EUR)", km["cout_100"]),
+            ("Coût des recharges (€)", km["cout"]),
+            ("Coût aux 100\xa0km (€)", km["cout_100"]),
         ]
     essence = complements.get("essence")
     if essence:
@@ -248,10 +248,10 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
              f"{essence['km']:,.0f}\xa0km, du {_jour(essence['debut'])} au "
              f"{_jour(essence['fin'])}".replace(",", "\xa0")),
             ("Voiture essence (L/100\xa0km)", essence["conso_essence"]),
-            ("Prix moyen du litre (EUR)", essence["prix_essence"]),
-            ("En essence (EUR)", essence["cout_essence"]),
-            ("En électricité (EUR)", essence["cout_electrique"]),
-            ("Économie (EUR)", essence["economie"]),
+            ("Prix moyen du litre (€)", essence["prix_essence"]),
+            ("En essence (€)", essence["cout_essence"]),
+            ("En électricité (€)", essence["cout_electrique"]),
+            ("Économie (€)", essence["economie"]),
         ]
         if essence.get("part_non_enregistree"):
             lignes.append((texte_part_non_enregistree(essence), ""))
@@ -272,7 +272,7 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
         if not donnees:
             return
         ws2.append(["", ""])
-        ws2.append([titre, "Recharges", "kWh", "Coût (EUR)", "EUR/kWh"])
+        ws2.append([titre, "Recharges", "kWh", "Coût (€)", "€/kWh"])
         for c in ws2[ws2.max_row]:
             c.font = Font(bold=True)
         for nom, a in sorted(donnees.items(), key=lambda x: -x[1]["cout"]):
@@ -340,7 +340,7 @@ def exporter_pdf(recharges: list[dict], chemin: str | Path,
     # --- Synthese globale ---
     prix_moyen = st["cout"] / st["kwh"] if st["kwh"] else 0
     data_syn = [
-        ["", "Recharges", "Énergie (kWh)", "Coût (EUR)", "EUR/kWh"],
+        ["", "Recharges", "Énergie (kWh)", "Coût (€)", "€/kWh"],
         ["Total", st["n"], _fr(st["kwh"], 1), _fr(st["cout"]),
          _fr(prix_moyen, 4)],
         ["Maison", st["maison"]["n"], _fr(st["maison"]["kwh"], 1),
@@ -375,21 +375,21 @@ def exporter_pdf(recharges: list[dict], chemin: str | Path,
     if complements.get("abonnement") is not None:
         elements.append(Paragraph(
             f"<b>Abonnement électricité de la période :</b> "
-            f"{_fr(complements['abonnement'])}\xa0EUR. À part : il n'entre ni "
+            f"{_fr(complements['abonnement'])}\xa0€. À part : il n'entre ni "
             "dans le coût des recharges ni dans le prix du kWh.",
             styles["Normal"]))
         elements.append(Spacer(1, 0.3 * cm))
     if complements.get("frais_cartes") is not None:
         elements.append(Paragraph(
             f"<b>Frais de cartes de recharge de la période :</b> "
-            f"{_fr(complements['frais_cartes'])}\xa0EUR (achats de cartes et "
+            f"{_fr(complements['frais_cartes'])}\xa0€ (achats de cartes et "
             "abonnements), à part eux aussi.", styles["Normal"]))
         elements.append(Spacer(1, 0.3 * cm))
     km = complements.get("km")
     if km:
         elements.append(Paragraph(
             f"<b>Coût de vos recharges aux 100\xa0km :</b> "
-            f"{_fr(km['cout_100'])}\xa0EUR/100\xa0km — {_fr(km['cout'])}\xa0EUR de "
+            f"{_fr(km['cout_100'])}\xa0€/100\xa0km — {_fr(km['cout'])}\xa0€ de "
             f"recharges enregistrées pour {_fr(km['km'], 0)}\xa0km, du "
             f"{_jour(km['debut'])} au {_jour(km['fin'])}, entre vos relevés "
             "du compteur (abonnement et frais de cartes non compris).",
@@ -400,10 +400,10 @@ def exporter_pdf(recharges: list[dict], chemin: str | Path,
                  f"{_fr(essence['km'], 0)}\xa0km, du {_jour(essence['debut'])} au "
                  f"{_jour(essence['fin'])}, à "
                  f"{_fr(essence['conso_essence'], 1)}\xa0L/100\xa0km et "
-                 f"{_fr(essence['prix_essence'])}\xa0EUR/L en moyenne : "
-                 f"{_fr(essence['cout_essence'])}\xa0EUR en essence, contre "
-                 f"{_fr(essence['cout_electrique'])}\xa0EUR en électricité, soit "
-                 f"{_fr(essence['economie'])}\xa0EUR d'économie.")
+                 f"{_fr(essence['prix_essence'])}\xa0€/L en moyenne : "
+                 f"{_fr(essence['cout_essence'])}\xa0€ en essence, contre "
+                 f"{_fr(essence['cout_electrique'])}\xa0€ en électricité, soit "
+                 f"{_fr(essence['economie'])}\xa0€ d'économie.")
         if essence.get("part_non_enregistree"):
             texte += " " + texte_part_non_enregistree(essence)
         elements.append(Spacer(1, 0.3 * cm))
@@ -415,7 +415,7 @@ def exporter_pdf(recharges: list[dict], chemin: str | Path,
     # --- Par tarif (maison) ---
     if st["par_tarif"]:
         elements.append(Paragraph("Répartition par tarif (maison)", h2))
-        data_t = [["Tarif", "Recharges", "kWh", "Coût (EUR)", "EUR/kWh"]]
+        data_t = [["Tarif", "Recharges", "kWh", "Coût (€)", "€/kWh"]]
         for nom, a in st["par_tarif"].items():
             moy = a["cout"] / a["kwh"] if a["kwh"] else 0
             data_t.append([nom, a["n"], _fr(a["kwh"], 1),
@@ -426,7 +426,7 @@ def exporter_pdf(recharges: list[dict], chemin: str | Path,
     # --- Par operateur (exterieur) ---
     if st["par_op"]:
         elements.append(Paragraph("Répartition par opérateur (extérieur)", h2))
-        data_o = [["Opérateur", "Recharges", "kWh", "Coût (EUR)", "EUR/kWh"]]
+        data_o = [["Opérateur", "Recharges", "kWh", "Coût (€)", "€/kWh"]]
         for nom, a in sorted(st["par_op"].items(), key=lambda x: -x[1]["cout"]):
             moy = a["cout"] / a["kwh"] if a["kwh"] else 0
             data_o.append([nom, a["n"], _fr(a["kwh"], 1),

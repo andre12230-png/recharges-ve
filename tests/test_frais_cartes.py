@@ -228,7 +228,7 @@ def test_les_exports_donnent_les_frais(fichier, tmp_path):
     export.exporter_excel([recharge], chemin, "2025", complements=c)
     lignes = {rang[0]: rang[1] for rang in load_workbook(chemin)["Synthèse"]
               .iter_rows(values_only=True) if rang[0]}
-    assert lignes["Frais de cartes de recharge de la période (EUR)"] == 20.0
+    assert lignes["Frais de cartes de recharge de la période (€)"] == 20.0
 
 
 def test_tout_compte_une_carte_achetee_avant_la_premiere_recharge(fichier):

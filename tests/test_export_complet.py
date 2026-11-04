@@ -10,6 +10,7 @@ sont ecrits dans un dossier jetable.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pytest
@@ -107,15 +108,15 @@ def _synthese(tmp_path, complements):
 
 def test_excel_donne_abonnement_et_km(tmp_path):
     lignes = _synthese(tmp_path, _complements("Tout", "2025"))
-    assert lignes["Abonnement électricité de la période (EUR)"] == 120.0
+    assert lignes["Abonnement électricité de la période (€)"] == 120.0
     assert lignes["Distance parcourue (km)"] == 400.0
-    assert lignes["Coût aux 100\xa0km (EUR)"] == 2.0
+    assert lignes["Coût aux 100\xa0km (€)"] == 2.0
 
 
 def test_excel_sans_complements_comme_avant(tmp_path):
     lignes = _synthese(tmp_path, None)
-    assert "Abonnement électricité de la période (EUR)" not in lignes
-    assert "Coût aux 100\xa0km (EUR)" not in lignes
+    assert "Abonnement électricité de la période (€)" not in lignes
+    assert "Coût aux 100\xa0km (€)" not in lignes
     assert lignes["Nombre de recharges"] == 3
 
 
@@ -123,7 +124,7 @@ def test_excel_sans_complements_comme_avant(tmp_path):
 
 def test_detail_des_recharges_pour_le_pdf():
     lignes = export.lignes_detail(RECHARGES)
-    assert lignes[0] == ["Date", "Lieu", "kWh", "Coût (EUR)", "EUR/kWh",
+    assert lignes[0] == ["Date", "Lieu", "kWh", "Coût (€)", "€/kWh",
                          "Tarif / Opérateur"]
     assert lignes[1] == ["10/03/2025 23:00", "Maison", "20,00", "3,00",
                          "0,1500", "Mon contrat"]
@@ -140,7 +141,7 @@ def test_pdf_contient_la_liste_et_les_km(tmp_path):
     assert "Détail des recharges" in texte
     assert "10/03/2025 23:00" in texte and "Aire des Tilleuls" not in texte
     assert "Abonnement" in texte and "120,00" in texte
-    assert "2,00 EUR/100 km" in texte
+    assert "2,00 €/100 km" in texte
 
 
 def test_pdf_sans_complements_se_construit(tmp_path):
@@ -173,8 +174,8 @@ def test_la_comparaison_essence_seulement_pour_tous_les_lieux():
 
 def test_excel_donne_la_comparaison_essence(tmp_path):
     lignes = _synthese(tmp_path, _avec_essence("Tout", "2025"))
-    assert lignes["En essence (EUR)"] == 100.0
-    assert lignes["Économie (EUR)"] == 70.0
+    assert lignes["En essence (€)"] == 100.0
+    assert lignes["Économie (€)"] == 70.0
 
 
 def test_pdf_donne_la_comparaison_essence(tmp_path):
@@ -183,7 +184,7 @@ def test_pdf_donne_la_comparaison_essence(tmp_path):
     export.exporter_pdf(RECHARGES, chemin, "Tout - 2025",
                         complements=_avec_essence("Tout", "2025"))
     texte = " ".join(p.extract_text() for p in pypdf.PdfReader(chemin).pages)
-    assert "voiture essence" in texte and "70,00 EUR" in texte
+    assert "voiture essence" in texte and "70,00 €" in texte
     assert "40 %" in texte
 
 
@@ -203,3 +204,28 @@ def test_excel_traite_les_champs_textuels_comme_du_texte(tmp_path):
         cellule = feuille.cell(row=2, column=colonne)
         assert cellule.value == valeur
         assert cellule.data_type == "s"
+
+
+# ---------- « € » et non « EUR » (choix d'André du 04/11/2026) ----------
+# Tous les écrans écrivent « € » ; les exports écrivaient « EUR » sans
+# raison écrite. La police du PDF (Helvetica) sait dessiner le « € ».
+
+def test_excel_ecrit_l_euro_et_non_eur(tmp_path):
+    chemin = tmp_path / "essai.xlsx"
+    export.exporter_excel(RECHARGES, chemin, "Tout - 2025",
+                          complements=_avec_essence("Tout", "2025"))
+    textes = [str(c) for feuille in load_workbook(chemin).worksheets
+              for ligne in feuille.iter_rows(values_only=True)
+              for c in ligne if c is not None]
+    assert not [t for t in textes if re.search(r"EUR", t)]
+    assert "Coût (€)" in textes and "€/kWh" in textes
+
+
+def test_pdf_ecrit_l_euro_et_non_eur(tmp_path):
+    pypdf = pytest.importorskip("pypdf")
+    chemin = tmp_path / "essai.pdf"
+    export.exporter_pdf(RECHARGES, chemin, "Tout - 2025",
+                        complements=_avec_essence("Tout", "2025"))
+    texte = " ".join(p.extract_text() for p in pypdf.PdfReader(chemin).pages)
+    assert not re.search(r"EUR", texte)
+    assert "70,00 € d'économie" in texte and "€/kWh" in texte
