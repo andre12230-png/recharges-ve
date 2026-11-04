@@ -1350,8 +1350,10 @@ def valider_tarif(tarif: dict) -> dict:
     vaut refuser une saisie douteuse que recalculer 250 recharges de travers.
     """
     propre = dict(tarif)
-    if not propre.get("nom", "").strip():
-        raise ValueError("Le nom du tarif est obligatoire.")
+    # Un nom qui n'est pas un texte (fichier modifié à la main : « 123 »)
+    # faisait remonter une erreur Python (audit du 04/11/2026, T5).
+    if not isinstance(propre.get("nom"), str) or not propre["nom"].strip():
+        raise ValueError("Le nom du tarif est obligatoire (un texte).")
     propre["nom"] = propre["nom"].strip()
 
     try:
@@ -1385,8 +1387,11 @@ def valider_tarif(tarif: dict) -> dict:
                 raise ValueError(
                     f"Le prix en {libelle} doit être supérieur à zéro.")
         plages = []
-        for paire in propre.get("plages_hc") or []:
-            if len(paire) != 2:
+        liste = propre.get("plages_hc") or []
+        if not isinstance(liste, list):
+            raise ValueError("Les plages d'heures creuses sont illisibles.")
+        for paire in liste:
+            if not isinstance(paire, (list, tuple)) or len(paire) != 2:
                 raise ValueError("Chaque plage doit avoir une heure de début "
                                  "et une heure de fin.")
             debut_hc, fin_hc = (_verifier_heure(paire[0]),
@@ -1615,7 +1620,10 @@ def _ecrire_tarifs(contenu: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=str(TARIFS_FILE.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(contenu, f, indent=2, ensure_ascii=False)
+            # allow_nan=False : une valeur infinie n'est jamais écrite, comme
+            # pour recharges.json (audit du 04/11/2026, T5).
+            json.dump(contenu, f, indent=2, ensure_ascii=False,
+                      allow_nan=False)
             f.flush()
             os.fsync(f.fileno())
         _remplacer(tmp, TARIFS_FILE)
@@ -2480,8 +2488,29 @@ TYPES_FRAIS_CARTE = {"unique": "Achat unique",
 
 
 def charger_frais_cartes() -> list[dict]:
-    """Les frais de cartes, du plus ancien au plus recent."""
-    return list(_lire_tarifs_json().get("frais_cartes", []))
+    """Les frais de cartes, du plus ancien au plus recent.
+
+    Chacun est vérifié avec les mêmes règles qu'à l'enregistrement, comme
+    les périodes tarifaires (charger_tarifs) : un tarifs.json modifié à la
+    main ne doit pas faire compter des frais faux sans prévenir (audit du
+    04/11/2026, T5)."""
+    frais = _lire_tarifs_json().get("frais_cartes", [])
+    if not isinstance(frais, list):
+        raise ValueError("tarifs.json est invalide : les frais de cartes ne "
+                         "sont pas une liste.")
+    for numero, f in enumerate(frais, start=1):
+        try:
+            if not isinstance(f, dict):
+                raise ValueError("Ce ne sont pas des frais de carte.")
+            valider_frais_carte(f)
+        except ValueError as e:
+            nom = (str(f.get("carte") or "") if isinstance(f, dict)
+                   else "") or f"n° {numero}"
+            raise ValueError(
+                f"tarifs.json est invalide : les frais de la carte « {nom} » "
+                f"sont refusés. {e} S'ils ont été modifiés à la main, c'est "
+                f"à cet endroit qu'il faut regarder.") from None
+    return list(frais)
 
 
 def valider_frais_carte(frais: dict) -> dict:
@@ -2504,6 +2533,10 @@ def valider_frais_carte(frais: dict) -> dict:
         montant = float(frais.get("montant", 0))
     except (TypeError, ValueError):
         raise ValueError("Date ou montant illisible.") from None
+    # « Infinity » passait le contrôle et donnait un total infini (audit du
+    # 04/11/2026, T5) ; « NaN » échouait déjà au « > 0 ».
+    if not math.isfinite(montant):
+        raise ValueError("Le montant n'est pas un nombre valable.")
     if not montant > 0:
         raise ValueError("Le montant doit être supérieur à zéro.")
     if fin is not None and fin < debut:
@@ -3382,13 +3415,18 @@ def verifier_correspondance(c: dict) -> None:
 def _duree_csv(texte: str) -> timedelta | None:
     """« 8:00 », « 8:00:00 », « 1h30 », ou un nombre de minutes."""
     net = texte.strip().lower().replace(" ", "")
-    m = re.fullmatch(r"(\d+):(\d{2})(?::(\d{2}))?", net)
+    # Minutes et secondes de 00 à 59 : « 1:99 » ou « 1h99 » devenaient
+    # 2 h 39 sans prévenir, et la recharge pouvait changer de plage horaire
+    # (audit du 04/11/2026, T4). La ligne est maintenant non reconnue.
+    m = re.fullmatch(r"(\d+):([0-5]\d)(?::([0-5]\d))?", net)
     if m:
         return timedelta(hours=int(m.group(1)), minutes=int(m.group(2)),
                          seconds=int(m.group(3) or 0))
-    m = re.fullmatch(r"(\d+)h(\d{1,2})?(?:min)?", net)
+    m = re.fullmatch(r"(\d+)h([0-5]?\d)?(?:min)?", net)
     if m:
         return timedelta(hours=int(m.group(1)), minutes=int(m.group(2) or 0))
+    if ":" in net or "h" in net:
+        return None                 # une heure mal formée, pas des minutes
     minutes = _nombre_csv(net.replace("min", ""))
     return timedelta(minutes=minutes) if minutes is not None else None
 
