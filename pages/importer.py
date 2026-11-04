@@ -14,8 +14,9 @@ from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel,
 from composants import carte, paragraphe, texte_a_lire, texte_fixe
 from erreurs import erreur_en_clair
 from formats import fmt_date_fr, fmt_kwh
-from recharges import (FormatCsvInconnu, apercu_csv, dossier_donnees,
-                       importer_csv_maison, retenir_correspondance)
+from recharges import (FormatCsvInconnu, ImportAnnule, apercu_csv,
+                       dossier_donnees, importer_csv_maison,
+                       retenir_correspondance)
 from theme_qt import ALERTE_TEXTE, VERT
 
 
@@ -36,6 +37,10 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
                        "saisies manuelles remplacées") + ", "
              + _accord(res["doublons"], "doublon", "doublons") + ", "
              + _accord(res["zero_kwh"], "ignorée", "ignorées"))
+    if res.get("ignorees_par_choix"):
+        texte += ", " + _accord(res["ignorees_par_choix"],
+                                "ignorée à votre demande",
+                                "ignorées à votre demande")
     if res.get("parasites"):
         texte += ", " + _accord(res["parasites"],
                                 "branchement sans recharge écarté",
@@ -43,10 +48,11 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
     texte += ", " + _accord(res["total_lus"], "lue", "lues")
     if not res["ajoutes"] and not res["remplaces"]:
         texte += "   (rien de nouveau : le fichier n'a pas été modifié)"
-    # Les saisies manuelles remplacées, une par ligne : la règle (moins de
-    # 2 h d'écart, même énergie) peut prendre une AUTRE session de la borne
-    # pour la même ; l'utilisateur doit pouvoir le vérifier (audits du
-    # 26/10/2026, #5).
+    # Les saisies manuelles remplacées, une par ligne : l'utilisateur doit
+    # pouvoir le vérifier (audits du 26/10/2026, #5). Depuis l'audit du
+    # 04/11/2026 (T1), seules les saisies qui recouvrent la session, ou
+    # celles qu'il a choisies, sont remplacées ; la règle reste une règle,
+    # d'où « à vérifier ».
     remplacements = res.get("remplacements") or []
     if remplacements:
         texte += ("\nSaisies à la main remplacées par une session de la "
@@ -56,8 +62,19 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
                       f"{fmt_kwh(rp['avant_kwh'])} → "
                       f"{fmt_date_fr(rp['apres_date'])}, "
                       f"{fmt_kwh(rp['apres_kwh'])}")
-    alerte = bool(res.get("non_reconnues"))
-    if alerte:
+    # Lignes proches d'une saisie à la main, gardées en double faute de
+    # réponse (import sans question) : à vérifier dans l'Historique.
+    a_verifier = res.get("a_verifier") or []
+    if a_verifier:
+        texte += ("\nÀ vérifier : ces recharges du fichier ressemblent à une "
+                  "saisie à la main ; les deux sont gardées. Supprimez le "
+                  "doublon dans l'Historique s'il s'agit de la même charge :")
+        for cas in a_verifier:
+            texte += (f"\n  • {fmt_date_fr(cas['fichier']['date'])}, "
+                      f"{fmt_kwh(cas['fichier']['kwh'])}")
+    alerte = bool(a_verifier)
+    if res.get("non_reconnues"):
+        alerte = True
         # Accorde avec le nombre (29/09/2026 ; c'etait « ligne(s) »)
         n = res["non_reconnues"]
         texte += ("\nATTENTION : 1 ligne non reconnue, donc pas enregistrée."
@@ -101,7 +118,11 @@ def construire(fenetre) -> QWidget:
         "application ou leur site : cherchez « exporter » ou « historique ». "
         "Importez ce fichier ici : chaque charge est ajoutée avec ses heures "
         "exactes et son énergie, et son coût est calculé d'après vos tarifs. "
-        "Une charge déjà enregistrée n'est jamais comptée deux fois. Si "
+        "Une charge déjà importée n'est pas ajoutée une seconde fois. Une "
+        "charge saisie à la main est remplacée par la ligne du fichier "
+        "quand leurs heures se recouvrent ; en cas de doute, l'application "
+        "vous montre les deux et vous demande quoi faire avant d'enregistrer. "
+        "Si "
         "l'application ne reconnaît pas le fichier, elle vous demande quelle "
         "colonne contient quoi, et s'en souvient pour la fois suivante."))
     corps.addWidget(paragraphe(
@@ -160,14 +181,22 @@ def demander_colonnes(parent, apercu: dict) -> dict | None:
 
 
 def importer_fichier(fenetre, chemin: str, resultat: QLabel) -> None:
-    """Importe sans demander de confirmation : une charge deja enregistree
-    n'est jamais comptee deux fois, reimporter est donc sans danger.
+    """Importe sans demander de confirmation : une charge deja importee
+    n'est pas ajoutee une seconde fois, reimporter est donc sans danger.
+    Une ligne proche d'une saisie a la main sans en etre surement la meme
+    ouvre la fenetre « Recharges a verifier », AVANT toute ecriture (audit
+    du 04/11/2026, T1).
 
     Un fichier d'un modele inconnu ouvre la fenetre « Quelles colonnes ? »
     (28/09/2026) ; le choix est retenu apres un import reussi."""
+    from dialogue_rapprochements import demander_rapprochements
+
+    def decider(cas):
+        return demander_rapprochements(fenetre, cas)
+
     try:
         try:
-            bilan = importer_csv_maison(chemin)
+            bilan = importer_csv_maison(chemin, decider=decider)
         except FormatCsvInconnu:
             apercu = apercu_csv(chemin)
             correspondance = demander_colonnes(fenetre, apercu)
@@ -178,9 +207,13 @@ def importer_fichier(fenetre, chemin: str, resultat: QLabel) -> None:
                 resultat.setStyleSheet(f"color: {ALERTE_TEXTE};")
                 resultat.show()
                 return
-            bilan = importer_csv_maison(chemin, correspondance=correspondance)
+            bilan = importer_csv_maison(chemin, correspondance=correspondance,
+                                        decider=decider)
             retenir_correspondance(apercu, correspondance)
         texte, alerte = texte_resultat(bilan)
+    except ImportAnnule:
+        texte, alerte = ("Import annulé : rien n'a été enregistré. Le fichier "
+                         "est intact, vous pourrez l'importer plus tard."), True
     except Exception as e:      # noqa: BLE001
         # Un fichier illisible peut echouer de bien des facons (encodage,
         # colonnes, droits) : le message du moteur est deja en francais, et

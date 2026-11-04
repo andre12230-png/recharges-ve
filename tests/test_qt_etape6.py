@@ -330,7 +330,8 @@ def test_page_importer(fenetre, monkeypatch, tmp_path):
     (tmp_path / "borne.csv").write_text("x", encoding="utf-8")
     monkeypatch.setattr(im, "dossier_donnees", lambda: tmp_path)
     appels = []
-    monkeypatch.setattr(im, "importer_csv_maison", lambda chemin: (
+    # **_options : la page passe aussi `decider` (audit T1 du 04/11/2026).
+    monkeypatch.setattr(im, "importer_csv_maison", lambda chemin, **_options: (
         appels.append(chemin) or {"ajoutes": 1, "remplaces": 0, "doublons": 0,
                                   "zero_kwh": 0, "total_lus": 1}))
     page = im.construire(fenetre)
@@ -343,7 +344,7 @@ def test_page_importer(fenetre, monkeypatch, tmp_path):
 def test_import_rate_en_orange(fenetre, monkeypatch, tmp_path):
     monkeypatch.setattr(im, "dossier_donnees", lambda: tmp_path)
 
-    def refus(chemin):
+    def refus(chemin, **_options):
         raise ValueError("Aucune recharge reconnue. NE LE SUPPRIMEZ PAS.")
     monkeypatch.setattr(im, "importer_csv_maison", refus)
     monkeypatch.setattr(QFileDialog, "getOpenFileName",

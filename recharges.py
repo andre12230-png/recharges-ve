@@ -3185,7 +3185,10 @@ def _meme_session(debut: datetime, kwh: float,
                   fin: datetime | None = None,
                   chargeur: str | None = None,
                   debut_borne: datetime | None = None) -> dict | None:
-    """La recharge déjà enregistrée qui décrit la même session, sinon None.
+    """La recharge déjà IMPORTÉE d'un CSV qui décrit la même session, sinon
+    None. Les saisies à la main sont rapprochées à part, par
+    `_saisies_proches` (audit du 04/11/2026, T1) : la règle approchée qui
+    les remplaçait d'office a été retirée d'ici.
 
     D'abord, une recharge importée qui a gardé l'heure de début écrite par
     la borne (« debut_borne », avant correction d'horloge) : même heure de
@@ -3195,17 +3198,13 @@ def _meme_session(debut: datetime, kwh: float,
     correction (15 min, décalée de 20 min) ne recouvrait plus la première :
     elle était ajoutée une seconde fois.
 
-    Sinon (saisie manuelle, ou recharge importée avant ce correctif),
-    même session = début à moins de 2 h d'écart, et même énergie :
-    - pour une recharge déjà importée d'un CSV : même énergie à trois
-      décimales près (la wallbox donne toujours le même chiffre), horaires
-      qui se chevauchent, et même chargeur. Avant l'audit du 14/10/2026, deux
-      sessions distinctes du même CSV (10 h-10 h 15 et 11 h-11 h 15, 1 kWh
-      chacune) étaient prises pour une seule. Le chevauchement, et non
-      l'heure exacte, reconnaît encore la même session quand la correction
-      d'horloge a changé entre deux imports ;
-    - pour une saisie manuelle : même énergie à la tolérance ci-dessus, dans
-      les 2 h (l'heure saisie peut être celle, décalée, de la wallbox).
+    Sinon (recharge importée avant ce correctif) : début à moins de 2 h,
+    même énergie à trois décimales près (la wallbox donne toujours le même
+    chiffre), horaires qui se chevauchent, et même chargeur. Avant l'audit
+    du 14/10/2026, deux sessions distinctes du même CSV (10 h-10 h 15 et
+    11 h-11 h 15, 1 kWh chacune) étaient prises pour une seule. Le
+    chevauchement, et non l'heure exacte, reconnaît encore la même session
+    quand la correction d'horloge a changé entre deux imports.
     S'il y en a plusieurs, la plus proche dans le temps l'emporte.
     """
     if debut_borne is not None:
@@ -3216,14 +3215,14 @@ def _meme_session(debut: datetime, kwh: float,
                     and _memes_chargeurs(chargeur, r_exist.get("chargeur"))):
                 return r_exist
 
-    ecart_admis = max(TOLERANCE_KWH, TOLERANCE_RELATIVE * kwh)
     retenue, meilleur = None, None
     for debut_exist, r_exist in deja:
+        if r_exist.get("source") != "csv_import":
+            continue          # saisie à la main : voir _saisies_proches
         # Une recharge qui a son heure de borne a déjà été comparée
         # ci-dessus, à coup sûr : la règle approchée ne doit pas la
         # rapprocher d'une autre ligne (deux vraies sessions distinctes).
-        if (debut_borne is not None and r_exist.get("source") == "csv_import"
-                and _heure_borne(r_exist) is not None):
+        if debut_borne is not None and _heure_borne(r_exist) is not None:
             continue
         secondes = abs((debut - debut_exist).total_seconds())
         if secondes > 2 * 3600:
@@ -3232,17 +3231,92 @@ def _meme_session(debut: datetime, kwh: float,
             kwh_exist = float(r_exist["kwh"])
         except (ValueError, TypeError, KeyError):
             continue
-        if r_exist.get("source") == "csv_import":
-            identique = (round(kwh_exist, 3) == round(kwh, 3)
-                         and _horaires_compatibles(debut, fin, debut_exist,
-                                                   r_exist)
-                         and _memes_chargeurs(chargeur,
-                                              r_exist.get("chargeur")))
-        else:
-            identique = abs(kwh_exist - kwh) <= ecart_admis + 1e-9
+        identique = (round(kwh_exist, 3) == round(kwh, 3)
+                     and _horaires_compatibles(debut, fin, debut_exist,
+                                               r_exist)
+                     and _memes_chargeurs(chargeur, r_exist.get("chargeur")))
         if identique and (meilleur is None or secondes < meilleur):
             retenue, meilleur = r_exist, secondes
     return retenue
+
+
+# Réponses possibles pour un cas douteux (voir importer_csv_maison) : garder
+# les deux recharges, ignorer la ligne du fichier, ou l'identifiant de la
+# saisie à remplacer par cette ligne.
+GARDER_LES_DEUX = "garder_les_deux"
+IGNORER_LA_LIGNE = "ignorer_la_ligne"
+
+
+class ImportAnnule(Exception):
+    """L'utilisateur a annulé l'import devant les cas douteux : rien n'a
+    été enregistré."""
+
+
+def _saisie_recouvre(debut_exist: datetime, r_exist: dict,
+                     debut: datetime, fin: datetime) -> bool:
+    """Vrai si la saisie à la main recouvre la session [debut, fin].
+
+    Sans heure de fin (tarif à prix unique), la saisie recouvre la session
+    si son début tombe pendant celle-ci."""
+    try:
+        fin_exist = _parse_dt(r_exist["fin"]) if r_exist.get("fin") else None
+    except (ValueError, TypeError):
+        fin_exist = None
+    if fin_exist is None:
+        return debut <= debut_exist <= fin
+    return debut < fin_exist and debut_exist < fin
+
+
+def _saisies_proches(debut: datetime, fin: datetime, kwh: float,
+                     deja: list[tuple[datetime, dict]],
+                     debut_borne: datetime | None = None,
+                     fin_borne: datetime | None = None
+                     ) -> tuple[dict | None, list[dict]]:
+    """Les saisies à la main qui pourraient décrire cette session du CSV.
+
+    Rend (saisie_sure, saisies_douteuses), au plus l'une des deux remplie :
+    - sûre : UNE seule saisie recouvre la session dans le temps, et son
+      énergie est dans la tolérance. Elle sera remplacée par la ligne du
+      fichier, sans rien demander : c'est le cas courant (saisie au
+      téléphone, puis export de la borne) ;
+    - douteuses : une ou plusieurs saisies proches sans être sûres (moins
+      de 2 h et même énergie mais sans recouvrement, plusieurs qui
+      recouvrent, ou une qui recouvre avec une énergie trop différente).
+      L'utilisateur choisit avant toute écriture.
+
+    Avant l'audit du 04/11/2026 (T1), toute saisie à moins de 2 h et de même
+    énergie était remplacée d'office : une AUTRE session pouvait effacer une
+    vraie saisie. Et la même session saisie avec une énergie hors tolérance
+    était ajoutée une seconde fois, sans un mot.
+
+    Le recouvrement est cherché à l'heure corrigée ET à l'heure de la borne
+    (`debut_borne`, `fin_borne`) : la saisie a pu être faite à l'heure,
+    décalée, affichée par la wallbox."""
+    ecart_admis = max(TOLERANCE_KWH, TOLERANCE_RELATIVE * kwh)
+    recouvrantes: list[tuple[float, dict, bool]] = []
+    proches: list[tuple[float, dict]] = []
+    for debut_exist, r_exist in deja:
+        if r_exist.get("source") == "csv_import":
+            continue          # déjà importée : voir _meme_session
+        try:
+            kwh_exist = float(r_exist["kwh"])
+        except (ValueError, TypeError, KeyError):
+            continue
+        secondes = abs((debut - debut_exist).total_seconds())
+        meme_energie = abs(kwh_exist - kwh) <= ecart_admis + 1e-9
+        recouvre = _saisie_recouvre(debut_exist, r_exist, debut, fin) or (
+            debut_borne is not None and fin_borne is not None
+            and _saisie_recouvre(debut_exist, r_exist, debut_borne,
+                                 fin_borne))
+        if recouvre:
+            recouvrantes.append((secondes, r_exist, meme_energie))
+        elif secondes <= 2 * 3600 and meme_energie:
+            proches.append((secondes, r_exist))
+    if len(recouvrantes) == 1 and recouvrantes[0][2]:
+        return recouvrantes[0][1], []
+    douteuses = sorted([(s, r_ex) for s, r_ex, _m in recouvrantes] + proches,
+                       key=lambda paire: paire[0])
+    return None, [r_ex for _s, r_ex in douteuses]
 
 
 def _heure_borne(r_exist: dict) -> datetime | None:
@@ -3490,13 +3564,49 @@ def _n_lignes(n: int) -> str:
     return f"{n} ligne{'s' if n > 1 else ''}"
 
 
-@sous_verrou
 def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
-                        correspondance: dict | None = None) -> dict:
+                        correspondance: dict | None = None,
+                        decider=None) -> dict:
     """Importe l'export d'une borne. Sans `correspondance`, le format
     d'origine (six colonnes) est reconnu seul ; a defaut, un choix de
     colonnes retenu pour ce modele de fichier ; a defaut encore,
-    FormatCsvInconnu : la page Importer demande alors les colonnes."""
+    FormatCsvInconnu : la page Importer demande alors les colonnes.
+
+    `decider(cas)` : appelée s'il y a des cas douteux (une ligne du fichier
+    proche d'une saisie à la main sans en être sûrement la même, voir
+    _saisies_proches), AVANT toute écriture. Elle reçoit la liste des cas
+    ({"fichier": {...}, "saisies": [...]}) et rend, pour chacun,
+    GARDER_LES_DEUX, IGNORER_LA_LIGNE ou l'identifiant de la saisie à
+    remplacer ; ou None pour annuler l'import (ImportAnnule, rien n'est
+    écrit). Sans `decider`, les deux recharges sont gardées et le bilan les
+    liste (« a_verifier ») : rien n'est jamais remplacé sur un doute (audit
+    du 04/11/2026, T1).
+
+    Deux passages : le premier, à blanc, repère les cas douteux sans rien
+    écrire ; la question est posée HORS du verrou d'écriture (une saisie du
+    téléphone n'attend pas que l'utilisateur ait répondu) ; le second
+    importe avec les réponses. Un cas apparu entre-temps est gardé en
+    double, sans rien remplacer."""
+    reponses: dict = {}
+    if decider is not None:
+        cas = _importer_csv(chemin, ignorer_zero, correspondance,
+                            reponses=None, a_blanc=True)["a_verifier"]
+        if cas:
+            choix = decider(cas)
+            if choix is None:
+                raise ImportAnnule("Import annulé : rien n'a été enregistré.")
+            reponses = {c["cle"]: rep for c, rep in zip(cas, choix,
+                                                        strict=True)}
+    return _importer_csv(chemin, ignorer_zero, correspondance,
+                         reponses=reponses, a_blanc=False)
+
+
+@sous_verrou
+def _importer_csv(chemin: str | Path, ignorer_zero: bool,
+                  correspondance: dict | None, reponses: dict | None,
+                  a_blanc: bool) -> dict:
+    """Le corps de l'import, sous le verrou d'écriture. `a_blanc` : rien
+    n'est écrit, seuls les cas douteux comptent (premier passage)."""
     chemin = Path(chemin)
     contenu = _lire_texte_csv(chemin)
 
@@ -3569,6 +3679,10 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
     # montre, pour qu'une autre session de la borne ne puisse pas effacer
     # une vraie saisie sans que personne le voie (audits du 26/10/2026, #5).
     remplacements: list[dict] = []
+    # Lignes proches d'une saisie à la main sans en être sûrement la même :
+    # mises de côté, puis traitées après la boucle selon les réponses (T1).
+    en_attente: list[dict] = []
+    ignorees_par_choix = 0
     zero_kwh = 0
     parasites = 0
     completees = 0      # anciennes recharges qui reçoivent l'heure de borne
@@ -3612,9 +3726,7 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         proche = _meme_session(debut, kwh, deja, fin=fin, chargeur=serial,
                                debut_borne=debut_borne)
         # Déjà issue d'un import CSV : rien de neuf à en tirer, on passe.
-        # Sinon (saisie manuelle), on la remplace plus bas par les données
-        # exactes du CSV, même si l'heure de début coïncide déjà.
-        if proche is not None and proche.get("source") == "csv_import":
+        if proche is not None:
             doublons += 1
             # Recharge importée avant le 16/10/2026 : elle reçoit l'heure de
             # la borne, pour être reconnue même si la correction change.
@@ -3623,6 +3735,12 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
                     timespec="seconds")
                 completees += 1
             continue
+
+        # Une saisie à la main de la même session : sûre, elle sera
+        # remplacée ; douteuse, la ligne est mise de côté (audit T1).
+        saisie_sure, douteuses = _saisies_proches(
+            debut, fin, kwh, deja, debut_borne=debut_borne,
+            fin_borne=_parse_dt(s_fin))
 
         # Après le contrôle des doublons : une session déjà enregistrée n'est
         # pas signalée à chaque nouvel import du même fichier.
@@ -3665,31 +3783,48 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         }
         if cout_wb is not None:
             champs["cout_wallbox"] = round(cout_wb, 2)
-        if proche is not None:
-            # Saisie manuelle de la même session : remplacée par les données
-            # précises du CSV (heure corrigée, durée, coût wallbox). L'id
-            # d'origine est conservé.
-            remplacements.append({
-                "avant_date": proche.get("date"),
-                "avant_kwh": proche.get("kwh"),
-                "apres_date": champs["date"],
-                "apres_kwh": champs["kwh"],
-            })
-            proche.update(champs)
-            remplaces += 1
+        if saisie_sure is not None:
+            remplaces += _remplacer_saisie(saisie_sure, champs, remplacements)
+        elif douteuses:
+            en_attente.append({
+                "cle": f"{champs['date']}|{champs['kwh']}|{serial}",
+                "champs": champs, "debut": debut, "saisies": douteuses})
         else:
-            nouvelle = {"id": _nouvel_id(), **champs}
-            data["recharges"].append(nouvelle)
-            # Retenue aussitôt : si la même session figure deux fois dans le
-            # CSV, la seconde sera vue comme un doublon (source csv_import).
-            deja.append((debut, nouvelle))
+            _ajouter_recharge_importee(data, deja, debut, champs)
             ajoutes += 1
 
     # Tout ou rien : tant qu'une recharge du fichier n'a pas de tarif, rien
     # n'est enregistre. Sinon le second import, apres correction du tarif,
-    # melangerait des recharges deja la et des neuves.
+    # melangerait des recharges deja la et des neuves. Vérifié AVANT de
+    # poser la moindre question sur les cas douteux.
     if hors_grille:
         raise ValueError(_message_hors_grille(hors_grille, tarifs))
+
+    cas = [_cas_douteux(attente) for attente in en_attente]
+    if a_blanc:
+        return {"a_verifier": cas}
+
+    # Les cas douteux, selon les réponses. Sans réponse : les deux recharges
+    # sont gardées, et le bilan les liste pour que l'utilisateur vérifie.
+    a_verifier: list[dict] = []
+    for attente, decrit in zip(en_attente, cas, strict=True):
+        reponse = (reponses or {}).get(attente["cle"])
+        if reponse == IGNORER_LA_LIGNE:
+            ignorees_par_choix += 1
+            continue
+        cible = next((s for s in attente["saisies"]
+                      if reponse not in (None, GARDER_LES_DEUX)
+                      and s.get("id") == reponse
+                      and s.get("source") != "csv_import"), None)
+        if cible is not None:
+            remplaces += _remplacer_saisie(cible, attente["champs"],
+                                           remplacements)
+            continue
+        _ajouter_recharge_importee(data, deja, attente["debut"],
+                                   attente["champs"])
+        ajoutes += 1
+        if reponse is None:
+            a_verifier.append(decrit)
 
     # N'ecrire (et donc ne creer un backup) que si quelque chose a change :
     # reimporter un CSV deja traite ne doit pas consommer une des 15 places
@@ -3698,8 +3833,49 @@ def importer_csv_maison(chemin: str | Path, ignorer_zero: bool = True,
         sauvegarder_donnees(data)
     return {"total_lus": len(records), "ajoutes": ajoutes, "doublons": doublons,
             "remplaces": remplaces, "remplacements": remplacements,
+            "a_verifier": a_verifier,
+            "ignorees_par_choix": ignorees_par_choix,
             "zero_kwh": zero_kwh, "trop_kwh": trop_kwh,
             "parasites": parasites, "non_reconnues": non_reconnues}
+
+
+def _remplacer_saisie(saisie: dict, champs: dict,
+                      remplacements: list[dict]) -> int:
+    """Remplace une saisie à la main par la ligne du CSV (heure corrigée,
+    durée, coût wallbox) ; l'id d'origine est conservé. Le remplacement est
+    noté pour le compte rendu (audits du 26/10/2026, #5). Rend 1."""
+    remplacements.append({
+        "avant_date": saisie.get("date"),
+        "avant_kwh": saisie.get("kwh"),
+        "apres_date": champs["date"],
+        "apres_kwh": champs["kwh"],
+    })
+    saisie.update(champs)
+    return 1
+
+
+def _ajouter_recharge_importee(data: dict, deja: list, debut: datetime,
+                               champs: dict) -> None:
+    """Ajoute une recharge du CSV. Retenue aussitôt dans `deja` : si la même
+    session figure deux fois dans le CSV, la seconde sera vue comme un
+    doublon (source csv_import)."""
+    nouvelle = {"id": _nouvel_id(), **champs}
+    data["recharges"].append(nouvelle)
+    deja.append((debut, nouvelle))
+
+
+def _cas_douteux(attente: dict) -> dict:
+    """Un cas douteux tel que la page Importer le montre : la ligne du
+    fichier et les saisies qui lui ressemblent."""
+    champs = attente["champs"]
+    return {
+        "cle": attente["cle"],
+        "fichier": {"date": champs["date"], "fin": champs.get("fin"),
+                    "kwh": champs["kwh"]},
+        "saisies": [{"id": s.get("id"), "date": s.get("date"),
+                     "fin": s.get("fin"), "kwh": s.get("kwh")}
+                    for s in attente["saisies"]],
+    }
 
 
 def _message_hors_grille(debuts: list[datetime], tarifs: list[dict]) -> str:
