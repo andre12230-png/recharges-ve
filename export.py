@@ -60,7 +60,9 @@ def _stats(recharges: list[dict]) -> dict:
     ext = [r for r in recharges if r.get("lieu") == "exterieur"]
 
     def somme(rs, cle):
-        return sum(r.get(cle, 0) for r in rs)
+        # « or 0 » : un nombre facultatif peut être vide dans un ancien
+        # fichier (audit du 04/11/2026, T2) ; il compte alors zéro.
+        return sum(r.get(cle) or 0 for r in rs)
 
     par_tarif: dict[str, dict] = defaultdict(lambda: {"n": 0, "kwh": 0.0, "cout": 0.0})
     for r in maison:
@@ -135,12 +137,12 @@ def exporter_excel(recharges: list[dict], chemin: str | Path,
             "Maison" if r.get("lieu") == "maison" else "Extérieur",
             round(r.get("kwh", 0), 3),
             round(r.get("cout_eur") or 0, 2),
-            round(r.get("prix_kwh", 0), 4),
+            round(r.get("prix_kwh") or 0, 4),
             tarif_op or "",
             r.get("carte", ""),
             r.get("lieu_detail", ""),
-            round(r.get("kwh_hc", 0), 2) if r.get("lieu") == "maison" else "",
-            round(r.get("kwh_hp", 0), 2) if r.get("lieu") == "maison" else "",
+            round(r.get("kwh_hc") or 0, 2) if r.get("lieu") == "maison" else "",
+            round(r.get("kwh_hp") or 0, 2) if r.get("lieu") == "maison" else "",
         ])
         # Ces colonnes contiennent des textes fournis par l'utilisateur.
         # Une valeur qui commence par « = » ne doit jamais devenir une formule.

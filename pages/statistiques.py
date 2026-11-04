@@ -80,7 +80,7 @@ def ecart_wallbox(recharges: list[dict]) -> dict | None:
     melait les deux, l'ecart etait faux, et souvent de signe inverse."""
     chiffrees = [r for r in recharges
                  if r.get("lieu") == "maison" and "cout_wallbox" in r]
-    wallbox = sum(r["cout_wallbox"] for r in chiffrees)
+    wallbox = sum(r["cout_wallbox"] or 0 for r in chiffrees)
     if not wallbox:
         return None
     reel = sum(r.get("cout_eur") or 0 for r in chiffrees)

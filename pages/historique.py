@@ -67,6 +67,15 @@ def tri_apres_clic(tri: tuple[str, bool], cle: str) -> tuple[str, bool]:
     return cle, cle in ("date", *NUMERIQUES)
 
 
+def _montant(valeur, decimales: int) -> str:
+    """Un coût ou un prix à la française ; « — » s'il est vide (ancien
+    fichier, audit du 04/11/2026, T2) : un coût inconnu n'est pas une
+    recharge gratuite, il ne doit pas s'afficher « 0,00 »."""
+    if valeur is None:
+        return "—"
+    return f"{valeur:.{decimales}f}".replace(".", ",")
+
+
 def cellules(r: dict) -> tuple[str, ...]:
     """Le texte des six colonnes d'une recharge."""
     if r.get("lieu") == "maison":
@@ -77,8 +86,8 @@ def cellules(r: dict) -> tuple[str, ...]:
     return (fmt_date_fr(r.get("date", "")),
             "Maison" if r.get("lieu") == "maison" else "Extérieur",
             f"{r.get('kwh', 0):.2f}".replace(".", ","),
-            f"{r.get('cout_eur', 0):.2f}".replace(".", ","),
-            f"{r.get('prix_kwh', 0):.4f}".replace(".", ","),
+            _montant(r.get("cout_eur"), 2),
+            _montant(r.get("prix_kwh"), 4),
             info)
 
 

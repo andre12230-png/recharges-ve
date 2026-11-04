@@ -83,6 +83,45 @@ def test_supprimer_une_periode_aussi(donnees):
     assert r.recalcul_en_attente() is True
 
 
+def recharge_sans_tarif():
+    """La seule période de la grille commence après la recharge du 02-03 :
+    plus aucun tarif ne la couvre, son coût ne peut pas être recalculé."""
+    avec_une_recharge_maison()
+    base = r.charger_tarifs()[0]
+    r.enregistrer_tarif(dict(BASE, debut="2026-04-01"), id_origine=base["id"])
+
+
+def test_recalcul_incomplet_garde_le_rappel(donnees):
+    """Audit indépendant du 04/11/2026, constat T3 : le rappel était effacé
+    même quand une recharge restait à son ancien coût."""
+    recharge_sans_tarif()
+    assert r.recalcul_en_attente() is True
+    n, laissees = r.recalculer_tout()
+    assert laissees == ["2026-03-02T22:00"]
+    assert r.recalcul_en_attente() is True
+    # Une fois la grille de nouveau complète, le recalcul l'efface.
+    base = r.charger_tarifs()[0]
+    r.enregistrer_tarif(dict(BASE), id_origine=base["id"])
+    assert r.recalculer_tout()[1] == []
+    assert r.recalcul_en_attente() is False
+
+
+def test_recalcul_incomplet_pose_le_rappel(donnees):
+    """Un recalcul lancé d'ailleurs (puissance de la borne changée dans les
+    Paramètres) qui laisse un coût ancien doit lui aussi le rappeler, même
+    sans rappel au départ."""
+    recharge_sans_tarif()
+    contenu = cles_de_tarifs_json()
+    contenu.pop("recalcul_en_attente")
+    r.TARIFS_FILE.write_text(json.dumps(contenu), encoding="utf-8")
+    assert r.recalcul_en_attente() is False
+    puissance = r.charger_config()["puissance_borne_kw"]
+    resultat = r.enregistrer_reglages_borne(
+        {"puissance_borne_kw": puissance + 1})
+    assert resultat["laissees"] == ["2026-03-02T22:00"]
+    assert r.recalcul_en_attente() is True
+
+
 def test_les_autres_reglages_sont_gardes(donnees):
     avec_une_recharge_maison()
     r.enregistrer_tarif(dict(NOUVEAU))

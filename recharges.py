@@ -1575,6 +1575,15 @@ def recalcul_en_attente() -> bool:
         return False
 
 
+def _poser_recalcul_en_attente() -> None:
+    """Un recalcul a laissé des recharges à leur ancien coût : le rappel
+    reste affiché jusqu'à un recalcul complet."""
+    contenu = _lire_tarifs_json()
+    if not contenu.get(CLE_RECALCUL_EN_ATTENTE):
+        contenu[CLE_RECALCUL_EN_ATTENTE] = True
+        _ecrire_tarifs(contenu)
+
+
 def _effacer_recalcul_en_attente() -> None:
     """Après un recalcul : la clé est retirée (et non laissée à « false »),
     le fichier redevient celui d'avant le rappel."""
@@ -3725,8 +3734,14 @@ def recalculer_tout(puissance_kw: float | None = None) -> tuple[int, list[str]]:
         r["tarif_nom"] = calc["tarif_nom"]
         n += 1
     sauvegarder_donnees(data)
-    # Les coûts suivent de nouveau la grille : plus rien à rappeler.
-    _effacer_recalcul_en_attente()
+    # Plus rien à rappeler seulement si TOUS les coûts suivent de nouveau la
+    # grille. Une recharge laissée à son ancien coût garde le rappel, et le
+    # pose s'il n'y en avait pas (recalcul lancé depuis les Paramètres) :
+    # avant, il disparaissait quand même (audit du 04/11/2026, T3).
+    if laissees:
+        _poser_recalcul_en_attente()
+    else:
+        _effacer_recalcul_en_attente()
     return n, laissees
 
 
@@ -3836,5 +3851,9 @@ def enregistrer_reglages_borne(reglages: dict) -> dict:
             except Exception as e:
                 signaler(f"[réglages] remise en état impossible : {e}")
         raise
+    # Une recharge décalée sans tarif pour sa nouvelle heure garde son
+    # ancien coût : le rappel le dit jusqu'à un recalcul complet (T3).
+    if laissees:
+        _poser_recalcul_en_attente()
     return {"decalees": decalees, "recalculees": recalculees,
             "laissees": laissees}

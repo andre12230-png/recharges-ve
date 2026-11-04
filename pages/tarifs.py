@@ -88,9 +88,9 @@ def bandeau_recalcul(fenetre, apres) -> QFrame | None:
     if not recalcul_en_attente():
         return None
     cadre = bandeau_alerte(
-        "⚡ La grille tarifaire a changé depuis le dernier recalcul : le coût "
-        "des recharges à la maison déjà enregistrées n'en tient pas encore "
-        "compte.")
+        "⚡ Le coût de recharges à la maison déjà enregistrées ne suit pas "
+        "encore la grille tarifaire actuelle. Si une date n'est couverte par "
+        "aucun tarif, ajoutez d'abord la période qui manque.")
     bouton = QPushButton("Recalculer tous les coûts")
     bouton.clicked.connect(lambda: (recalculer_les_couts(fenetre), apres()))
     ligne = QHBoxLayout()

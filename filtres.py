@@ -370,8 +370,10 @@ def filtrer_par_recherche(recharges: list[dict], texte: str) -> list[dict]:
             morceaux.append(f"{MOIS_FR[quand.month - 1]} {quand.year}")
         except ValueError:
             pass                    # date illisible : le reste suffit
-        nombres = (f"{r.get('kwh', 0):.2f} {r.get('cout_eur', 0):.2f} "
-                   f"{r.get('prix_kwh', 0):.4f}")
+        # « or 0 » : coût et prix peuvent être vides dans un ancien fichier
+        # (audit du 04/11/2026, T2).
+        nombres = (f"{r.get('kwh') or 0:.2f} {r.get('cout_eur') or 0:.2f} "
+                   f"{r.get('prix_kwh') or 0:.4f}")
         morceaux.append(nombres.replace(".", ","))   # comme a l'ecran
         morceaux.append(nombres)                     # et a l'anglaise
         # Un retour a la ligne entre deux informations : une recherche ne
@@ -396,7 +398,7 @@ def trier_recharges(recharges: list[dict], cle: str,
             # l'exterieur
             return (r.get("tarif_nom") or r.get("operateur") or "").lower()
         if cle in ("kwh", "cout_eur", "prix_kwh"):
-            return r.get(cle, 0)
+            return r.get(cle) or 0      # vide dans un ancien fichier (T2)
         return str(r.get(cle, "")).lower()
 
     return sorted(recharges, key=valeur, reverse=decroissant)

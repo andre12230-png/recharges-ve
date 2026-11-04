@@ -225,7 +225,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "le coût des recharges maison ; le bouton « Recalculer tous les "
          "coûts » le fait aussi plus tard. Tant que ce n'est pas fait, un "
          "bandeau orange le rappelle, sur la page Tarifs et sur le tableau "
-         "de bord. Chaque recharge reprend le prix "
+         "de bord. Il reste aussi affiché si une recharge n'a pu être "
+         "recalculée faute de tarif pour sa date : ajoutez la période qui "
+         "manque, puis recalculez. Chaque recharge reprend le prix "
          "de la période où elle a eu lieu : corriger une erreur de saisie "
          "dans une grille corrige donc ses recharges, sans toucher aux "
          "autres périodes."),

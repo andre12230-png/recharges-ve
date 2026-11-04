@@ -42,7 +42,7 @@ def chiffres_de_la_periode(toutes: list[dict], periode: str) -> dict:
     maison = [r for r in recharges if r.get("lieu") == "maison"]
     ext = [r for r in recharges if r.get("lieu") == "exterieur"]
     kwh_m = sum(r.get("kwh", 0) for r in maison)
-    kwh_hc = sum(r.get("kwh_hc", 0) for r in maison)
+    kwh_hc = sum(r.get("kwh_hc") or 0 for r in maison)
     kwh_e = sum(r.get("kwh", 0) for r in ext)
     cout_e = sum(r.get("cout_eur") or 0 for r in ext)
 
