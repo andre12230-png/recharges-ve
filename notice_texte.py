@@ -454,10 +454,12 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Nouvelles versions et avis", [
         ("Mise à jour",
          "L'application ne vérifie pas toute seule qu'une nouvelle version "
-         "existe. Le bouton « 🔄 Mise à jour », en bas du menu, ouvre dans "
-         "votre navigateur la page de la dernière version : si son numéro "
-         "est plus grand que celui affiché en bas du menu, une mise à jour "
-         "vous attend. Fermez l'application avant de lancer l'installeur : "
+         "existe. Le bouton « 🔄 Mise à jour », en bas du menu, ouvre une "
+         "petite fenêtre : « 🌐 Voir les nouveautés » affiche dans votre "
+         "navigateur la page de la dernière version ; si son numéro est plus "
+         "grand que celui affiché en bas du menu, une mise à jour vous "
+         "attend. « ⬇ Télécharger l'installeur » la récupère directement. "
+         "Fermez l'application avant de lancer l'installeur : "
          "vos données ne sont pas touchées."),
         ("Votre avis",
          "Le bouton « 💬 Votre avis » ouvre un court questionnaire dans "

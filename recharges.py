@@ -911,12 +911,12 @@ def charger_tarifs() -> list[dict]:
         tarifs = d["tarifs"]
     except (KeyError, TypeError):
         raise ValueError(
-            'tarifs.json est invalide : la clé "tarifs" est absente ou le '
+            "tarifs.json est invalide : la clé « tarifs » est absente ou le "
             "fichier ne contient pas ce qui est attendu."
         )
     if not isinstance(tarifs, list):
         raise ValueError(
-            'tarifs.json est invalide : la clé "tarifs" devrait contenir une '
+            "tarifs.json est invalide : la clé « tarifs » devrait contenir une "
             "liste de périodes tarifaires.")
     # Défaut A4 : chaque période est vérifiée avec les mêmes règles qu'une
     # saisie de la page Tarifs. Un fichier modifié à la main ne doit pas

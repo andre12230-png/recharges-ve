@@ -88,7 +88,7 @@ def bandeau_recalcul(fenetre, apres) -> QFrame | None:
     if not recalcul_en_attente():
         return None
     cadre = bandeau_alerte(
-        "⚡ Le coût de recharges à la maison déjà enregistrées ne suit pas "
+        "⚡ Le coût des recharges à la maison déjà enregistrées ne suit pas "
         "encore la grille tarifaire actuelle. Si une date n'est couverte par "
         "aucun tarif, ajoutez d'abord la période qui manque.")
     bouton = QPushButton("Recalculer tous les coûts")
@@ -455,7 +455,8 @@ def recalculer_les_couts(fenetre) -> None:
         QMessageBox.critical(fenetre, "Recalcul impossible", erreur_en_clair(e))
         return
     if laissees:
-        QMessageBox.warning(fenetre, "Recalcul", message_recalcul(n, laissees))
+        QMessageBox.warning(fenetre, "Recalcul incomplet",
+                            message_recalcul(n, laissees))
     else:
         QMessageBox.information(fenetre, "Recalcul", message_recalcul(n, []))
     fenetre._maj_bilan()

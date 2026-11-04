@@ -291,7 +291,7 @@ def test_enregistrement_exterieur(page, moteur):
         "carte": "Direct (CB)"}]
     assert e.resultat.text() == (
         "✓ Recharge du 24/09/2026 à 14:05, Ionity, Aire de l'Exemple (A0) : "
-        "18,00\xa0€  (0,6000\xa0€/kWh)")
+        "18,00\xa0€ (0,6000\xa0€/kWh)")
     # Chiffres et lieu vides ; operateur et carte gardes.
     assert e.texte("champ_e_kwh") == e.texte("champ_e_prix") == ""
     assert e.texte("champ_e_lieu") == ""
@@ -315,7 +315,7 @@ def test_exterieur_sans_operateur_ni_lieu(page, moteur):
             champ_e_kwh="30", champ_e_cout="18", champ_e_operateur="")
     e.bouton.click()
     assert e.resultat.text() == (
-        "✓ Recharge du 24/09/2026 à 14:05 : 18,00\xa0€  (0,6000\xa0€/kWh)")
+        "✓ Recharge du 24/09/2026 à 14:05 : 18,00\xa0€ (0,6000\xa0€/kWh)")
 
 
 def test_exterieur_une_seule_case_chiffree(page, moteur):

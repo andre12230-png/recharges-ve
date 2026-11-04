@@ -919,6 +919,9 @@ def autotest(chemin_rapport: str) -> int:
                  else "sombre")
     lignes.append("thème          : " + (nom_theme if attendu
                                           else f"INATTENDU ({fond})"))
+    # Sans la traduction, les boutons des boîtes seraient en anglais : un
+    # souci, pour que le contrôle avant livraison l'arrête (04/11/2026).
+    soucis += not traduit
     lignes.append("boutons Qt     : "
                   + ("en français" if traduit else "EN ANGLAIS (qtbase_fr absent)"))
     lignes.append(f"recharges lues : {len(charger_donnees()['recharges'])}")

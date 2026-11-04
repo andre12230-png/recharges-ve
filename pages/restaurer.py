@@ -113,7 +113,8 @@ def _restaurer(fenetre, fiche: dict) -> None:
     try:
         n = restaurer_backup(fiche["chemin"])
     except Exception as e:
-        QMessageBox.critical(fenetre, "Restauration", erreur_en_clair(e))
+        QMessageBox.critical(fenetre, "Restauration impossible",
+                             erreur_en_clair(e))
         return
     QMessageBox.information(
         fenetre, "Restauration",

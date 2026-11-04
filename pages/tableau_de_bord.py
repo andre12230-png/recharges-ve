@@ -182,7 +182,7 @@ def construire(fenetre) -> QWidget:
     for i, (libelle, valeur, couleur) in enumerate((
             ("RECHARGES", str(c["n"]), BLEU_NUIT),
             ("ÉNERGIE TOTALE", fmt_kwh(c["kwh"]), BLEU_NUIT),
-            ("COÛT RECHARGES", fmt_eur(c["cout"]), BLEU_NUIT),
+            ("COÛT DES RECHARGES", fmt_eur(c["cout"]), BLEU_NUIT),
             # Sans recharge, pas de prix : un tiret, et non « 0,0000 €/kWh »
             # (audit de design du 03/10/2026).
             ("PRIX MOYEN",

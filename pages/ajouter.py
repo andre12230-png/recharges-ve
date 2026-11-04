@@ -123,10 +123,10 @@ def _poser_maison(f: Formulaire):
     # Facultative avec un tarif a prix unique : la duree ne change alors
     # rien au cout, et l'exiger n'etait qu'une corvee de plus.
     f.champ_date_heure(
-        "Fin de la recharge   (vide si tarif à prix unique ; l'heure seule "
+        "Fin de la recharge (vide si tarif à prix unique ; l'heure seule "
         "suffit, ou une durée : « +6h12 »)", "champ_m_fin")
     f.champ("Énergie consommée (kWh)", "champ_m_kwh")
-    f.champ("Kilométrage du compteur  (facultatif)", "champ_m_km")
+    f.champ("Kilométrage du compteur (facultatif)", "champ_m_km")
     # Les cases a remplir s'encadrent de bleu tant qu'elles sont vides.
     f.exiger("champ_m_debut_jour", "champ_m_debut_heure", "champ_m_kwh")
 
@@ -153,7 +153,7 @@ def _poser_exterieur(f: Formulaire):
     # endroits. On peut y taper un lieu nouveau.
     f.liste("Lieu (choisissez dans la liste, ou tapez un nouveau lieu)",
             "champ_e_lieu", lieux_deja_saisis())
-    f.champ("Kilométrage du compteur  (facultatif)", "champ_e_km")
+    f.champ("Kilométrage du compteur (facultatif)", "champ_e_km")
     # Deux des trois suffisent : les vides s'encadrent tant qu'il en manque.
     # La date, vide, vaut « maintenant » : elle n'est pas exigee.
     f.exiger("champ_e_kwh", "champ_e_cout", "champ_e_prix", combien=2)
@@ -236,7 +236,7 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
         f.vider("champ_m_km")
     _resultat(f, f"✓ {_recharge_du(r['date'])} : {fmt_kwh(r['kwh_hc'])} HC"
                  f" + {fmt_kwh(r['kwh_hp'])} HP = {fmt_eur(r['cout_eur'])}"
-                 f"  ({r['tarif_nom']}){note}",
+                 f" ({r['tarif_nom']}){note}",
               ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     f.mettre_maintenant("champ_m_debut")
@@ -282,7 +282,7 @@ def enregistrer_exterieur(fenetre, f: Formulaire) -> None:
     # formulaire vide (le lieu est efface, la date remise a maintenant).
     qui = ", ".join(x for x in (operateur, lieu) if x)
     entete = _recharge_du(r["date"]) + (f", {qui}" if qui else "")
-    _resultat(f, f"✓ {entete} : {fmt_eur(r['cout_eur'])}  "
+    _resultat(f, f"✓ {entete} : {fmt_eur(r['cout_eur'])} "
                  f"({fmt_prix_kwh(r['prix_kwh'])}){note}", ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     # Operateur et carte restent : on recharge souvent au meme reseau.

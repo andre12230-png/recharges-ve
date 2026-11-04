@@ -111,7 +111,7 @@ class DialogueTarif(QDialog):
         t = self.tarif
         f.champ("Nom du tarif (ex. Mon contrat HP/HC)", "nom")
         f.champ("Début", "debut", "jj/mm/aaaa")
-        f.champ("Fin   (vide si c'est le tarif actuel)", "fin", "jj/mm/aaaa")
+        f.champ("Fin (vide si c'est le tarif actuel)", "fin", "jj/mm/aaaa")
         f.champ("Abonnement mensuel (€ TTC)", "abonnement_mensuel")
         f.ecrire("nom", t.get("nom", ""))
         f.ecrire("debut", date_fr(t.get("debut")) or debut_propose())
