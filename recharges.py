@@ -637,6 +637,25 @@ def sauvegarder_donnees(data: dict) -> None:
     _empreinte_cache = _empreinte_fichier()
 
 
+@sous_verrou
+def remettre_en_etat() -> bool:
+    """Réécrit recharges.json après une réparation au démarrage (le fichier
+    abîmé ou disparu a été remplacé EN MÉMOIRE par une sauvegarde).
+
+    Sous le verrou commun : la fenêtre le faisait elle-même, sans verrou, et
+    une recharge enregistrée par le téléphone entre la lecture et l'écriture
+    était effacée sans un mot (audit indépendant du 04/11/2026, T6).
+
+    Le fichier est relu sous le verrou : si le téléphone l'a déjà remis
+    d'aplomb en enregistrant, il n'y a plus rien à faire et rien n'est
+    réécrit (rend False). Sinon, la sauvegarde reprise est écrite (rend
+    True)."""
+    if DATA_FILE.exists() and _fichier_lisible(DATA_FILE):
+        return False
+    sauvegarder_donnees(charger_donnees(pour_modification=True))
+    return True
+
+
 def lister_backups() -> list[dict]:
     """Les sauvegardes de recharges.json, de la plus récente à la plus ancienne.
 

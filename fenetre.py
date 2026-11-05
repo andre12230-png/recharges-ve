@@ -41,7 +41,7 @@ from erreurs import erreur_en_clair
 from filtres import annee_en_cours, filtrer_par_periode, mois_en_cours
 from pages import CONSTRUCTEURS
 from recharges import (assurer_ids, charger_donnees, dossier_donnees,
-                       sauvegarder_donnees)
+                       remettre_en_etat)
 from formats import fmt_eur, fmt_nb_recharges
 from theme_qt import (CREME, LARGEUR_BANDEAU, appliquer_theme,
                       installer_traduction_qt, theme_actif)
@@ -634,9 +634,11 @@ class FenetrePrincipale(QMainWindow):
                           f"{info['mis_de_cote']}, dans le dossier des données.")
             # Remettre tout de suite le fichier d'aplomb : sans cela il reste
             # illisible tant qu'on n'enregistre rien, et la reparation
-            # recommencerait a chaque demarrage.
+            # recommencerait a chaque demarrage. Sous le verrou commun, par
+            # le moteur : faite ici sans verrou, elle pouvait effacer une
+            # recharge du telephone (audit du 04/11/2026, T6).
             try:
-                sauvegarder_donnees(charger_donnees())
+                remettre_en_etat()
                 texte += "\n\nLe fichier de travail a été remis en état."
             except Exception as e:
                 texte += ("\n\nLe fichier n'a pas pu être remis en état. "

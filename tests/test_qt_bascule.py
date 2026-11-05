@@ -98,7 +98,8 @@ def test_donnees_reparees(fenetre, boites, monkeypatch):
         "date_backup": datetime(2026, 9, 20, 8, 30), "n_recharges": 250,
         "mis_de_cote": "recharges.illisible.json"})
     remis = []
-    monkeypatch.setattr(module_fenetre, "sauvegarder_donnees", remis.append)
+    monkeypatch.setattr(module_fenetre, "remettre_en_etat",
+                        lambda: remis.append(True))
     AVERTIR(fenetre)
     (genre, titre, texte), = boites
     assert (genre, titre) == ("warning", "Données réparées")
@@ -168,7 +169,7 @@ def test_donnees_reparees_accorde_une_seule_recharge(fenetre, boites,
     monkeypatch.setattr(recharges, "DERNIERE_RESTAURATION", {
         "date_backup": datetime(2026, 9, 20, 8, 30), "n_recharges": 1,
         "mis_de_cote": None})
-    monkeypatch.setattr(module_fenetre, "sauvegarder_donnees", lambda d: None)
+    monkeypatch.setattr(module_fenetre, "remettre_en_etat", lambda: True)
     AVERTIR(fenetre)
     (_, _, texte), = boites
     assert "qui contient 1 recharge." in texte
@@ -182,7 +183,8 @@ def test_donnees_reprises_apres_disparition(fenetre, boites, monkeypatch):
         "cause": "absent", "date_backup": datetime(2026, 9, 20, 8, 30),
         "n_recharges": 250, "mis_de_cote": None})
     remis = []
-    monkeypatch.setattr(module_fenetre, "sauvegarder_donnees", remis.append)
+    monkeypatch.setattr(module_fenetre, "remettre_en_etat",
+                        lambda: remis.append(True))
     AVERTIR(fenetre)
     (genre, titre, texte), = boites
     assert (genre, titre) == ("warning", "Données réparées")
