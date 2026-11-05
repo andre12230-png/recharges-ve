@@ -99,14 +99,14 @@ def trouver_iscc() -> str:
         if chemin and os.path.isfile(chemin):
             return chemin
     raise SystemExit(
-        "ECHEC : Inno Setup 6 est introuvable.\n"
+        "ÉCHEC : Inno Setup 6 est introuvable.\n"
         "Installez-le avec : winget install JRSoftware.InnoSetup")
 
 
 def main() -> int:
     if not (CONSTRUIT / "Recharges-VE.exe").is_file():
         raise SystemExit(
-            f"ECHEC : {CONSTRUIT}\\Recharges-VE.exe est introuvable.\n"
+            f"ÉCHEC : {CONSTRUIT}\\Recharges-VE.exe est introuvable.\n"
             "Construisez d'abord l'exe (commande de build.bat).")
 
     # Inno Setup veut un numero pur (1.23.0) : le « v » est remis par la
@@ -117,12 +117,12 @@ def main() -> int:
     trouves = chercher_donnees_personnelles(CONSTRUIT)
     if trouves:
         raise SystemExit(
-            "ECHEC : donnees personnelles dans le dossier construit : "
+            "ÉCHEC : données personnelles dans le dossier construit : "
             + ", ".join(trouves))
     if contient_saisie_telephone(CONSTRUIT):
         raise SystemExit(
-            "ECHEC : cet exe contient la saisie depuis le telephone, reservee "
-            "a la version privee. Reconstruisez-le en version publique "
+            "ÉCHEC : cet exe contient la saisie depuis le téléphone, réservée "
+            "à la version privée. Reconstruisez-le en version publique "
             "(build.bat public).")
 
     iscc = trouver_iscc()
@@ -130,11 +130,11 @@ def main() -> int:
     # /Q : n'affiche que les erreurs. /D : definit AppVersion pour la recette.
     resultat = subprocess.run([iscc, "/Q", f"/DAppVersion={version}", str(RECETTE)])
     if resultat.returncode != 0:
-        raise SystemExit("ECHEC : la compilation de l'installeur a echoue.")
+        raise SystemExit("ÉCHEC : la compilation de l'installeur a échoué.")
 
     cible = SORTIE / f"Recharges-VE-Setup-v{version}.exe"
     if not cible.is_file():
-        raise SystemExit(f"ECHEC : {cible} n'a pas ete produit.")
+        raise SystemExit(f"ÉCHEC : {cible} n'a pas été produit.")
     # Copie a nom FIXE, celle qu'on joint a la release : le bouton « Mise a
     # jour » de l'application et le README visent
     # .../releases/latest/download/Recharges-VE-Setup.exe. Un nom numerote
@@ -144,7 +144,7 @@ def main() -> int:
     empreinte = hashlib.sha256(cible.read_bytes()).hexdigest()
     print()
     print(f"Installeur : {cible}")
-    print(f"Nom fixe   : {fixe} (a joindre a la release)")
+    print(f"Nom fixe   : {fixe} (à joindre à la release)")
     print(f"Taille     : {cible.stat().st_size / (1024 * 1024):.1f} Mo")
     print(f"SHA-256    : {empreinte}")
     return 0

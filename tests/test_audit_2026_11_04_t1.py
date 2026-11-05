@@ -211,7 +211,7 @@ def test_la_fenetre_propose_garder_les_deux_par_defaut(qapp):
     liste = fenetre.choix[0]
     textes = [liste.itemText(i) for i in range(liste.count())]
     assert textes == ["Garder les deux",
-                      "Remplacer ma saisie par la ligne du fichier",
+                      "Remplacer la saisie par la ligne du fichier",
                       "Ignorer la ligne du fichier"]
     liste.setCurrentIndex(1)
     assert fenetre.reponses() == ["s1"]

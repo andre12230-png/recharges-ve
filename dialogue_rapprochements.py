@@ -65,12 +65,17 @@ class DialogueRapprochements(QDialog):
         titre.setObjectName("TitreDialogue")
         titre.setWordWrap(True)
         disposition.addWidget(titre)
+        # « pour chacune » seulement s'il y en a plusieurs (contrôle du
+        # français du 05/11/2026, I1).
+        choisir = ("Choisissez pour chacune" if n > 1
+                   else "Choisissez ce qu'il faut en faire")
+        doublon = "les doublons" if n > 1 else "le doublon"
         aide = QLabel(
             "L'application ne peut pas savoir à coup sûr s'il s'agit de la "
             "même charge : les heures ne se recouvrent pas, ou l'énergie "
             "diffère, ou plusieurs saisies sont possibles. Rien n'est encore "
-            "enregistré. Choisissez pour chacune ; « Garder les deux » ne "
-            "fait rien perdre, vous pourrez supprimer le doublon ensuite "
+            f"enregistré. {choisir} ; « Garder les deux » ne "
+            f"fait rien perdre, vous pourrez supprimer {doublon} ensuite "
             "dans l'Historique.")
         aide.setObjectName("Discret")
         aide.setWordWrap(True)
@@ -92,9 +97,12 @@ class DialogueRapprochements(QDialog):
                 rang += 1
             liste = QComboBox()
             liste.addItem("Garder les deux", GARDER_LES_DEUX)
+            # « la saisie » et non « ma saisie » : la fenêtre parle à
+            # l'utilisateur (« Votre saisie : … »), les choix restent
+            # neutres, comme « Garder les deux » (contrôle du 05/11, I3).
             for saisie in un_cas["saisies"]:
-                quoi = ("ma saisie" if len(un_cas["saisies"]) == 1
-                        else f"ma saisie du {decrire(saisie)}")
+                quoi = ("la saisie" if len(un_cas["saisies"]) == 1
+                        else f"la saisie du {decrire(saisie)}")
                 liste.addItem(f"Remplacer {quoi} par la ligne du fichier",
                               saisie["id"])
             liste.addItem("Ignorer la ligne du fichier", IGNORER_LA_LIGNE)

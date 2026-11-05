@@ -65,13 +65,20 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
     # Lignes proches d'une saisie à la main, gardées en double faute de
     # réponse (import sans question) : à vérifier dans l'Historique.
     a_verifier = res.get("a_verifier") or []
-    if a_verifier:
-        texte += ("\nÀ vérifier : ces recharges du fichier ressemblent à une "
+    # Accordé avec le nombre (contrôle du français du 05/11/2026, I2).
+    if len(a_verifier) == 1:
+        texte += ("\nÀ vérifier : cette recharge du fichier ressemble à une "
                   "saisie à la main ; les deux sont gardées. Supprimez le "
                   "doublon dans l'Historique s'il s'agit de la même charge :")
-        for cas in a_verifier:
-            texte += (f"\n  • {fmt_date_fr(cas['fichier']['date'])}, "
-                      f"{fmt_kwh(cas['fichier']['kwh'])}")
+    elif a_verifier:
+        texte += ("\nÀ vérifier : ces recharges du fichier ressemblent à des "
+                  "saisies à la main ; chacune est gardée, avec la saisie "
+                  "qui lui ressemble. Supprimez les doublons dans "
+                  "l'Historique s'il s'agit des mêmes charges :")
+    # La liste des lignes concernées, qu'il y en ait une ou plusieurs.
+    for cas in a_verifier:
+        texte += (f"\n  • {fmt_date_fr(cas['fichier']['date'])}, "
+                  f"{fmt_kwh(cas['fichier']['kwh'])}")
     alerte = bool(a_verifier)
     if res.get("non_reconnues"):
         alerte = True

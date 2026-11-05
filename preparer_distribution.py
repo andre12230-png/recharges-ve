@@ -58,7 +58,7 @@ def verifier_archive(archive: Path) -> list[str]:
 
 def main() -> int:
     if not APPLICATION.is_dir():
-        print(f"ECHEC : {APPLICATION} est introuvable.")
+        print(f"ÉCHEC : {APPLICATION} est introuvable.")
         print("Lancez build.bat d'abord.")
         return 1
 
@@ -66,13 +66,13 @@ def main() -> int:
     # a toutes les profondeurs.
     trouves = chercher_donnees_personnelles(APPLICATION)
     if trouves:
-        print("ECHEC : donnees personnelles dans le dossier construit :")
+        print("ÉCHEC : données personnelles dans le dossier construit :")
         for t in trouves:
             print(f"  {t}")
         return 1
     if contient_saisie_telephone(APPLICATION):
-        print("ECHEC : cet exe contient la saisie depuis le telephone, reservee")
-        print("a la version privee. Reconstruisez-le en version publique")
+        print("ÉCHEC : cet exe contient la saisie depuis le téléphone, réservée")
+        print("à la version privée. Reconstruisez-le en version publique")
         print("(build.bat public).")
         return 1
 
@@ -99,15 +99,15 @@ def main() -> int:
     suspects = verifier_archive(archive)
     if suspects:
         archive.unlink(missing_ok=True)
-        print("ECHEC : des donnees personnelles ont failli partir.")
+        print("ÉCHEC : des données personnelles ont failli partir.")
         for s in suspects:
             print(f"  {s}")
-        print("L'archive a ete supprimee.")
+        print("L'archive a été supprimée.")
         return 1
 
     taille = archive.stat().st_size / (1024 * 1024)
-    print(f"Archive prete : {archive}")
-    print(f"{n} fichiers, {taille:.1f} Mo — aucune donnee personnelle.")
+    print(f"Archive prête : {archive}")
+    print(f"{n} fichiers, {taille:.1f} Mo — aucune donnée personnelle.")
     return 0
 
 

@@ -126,12 +126,12 @@ divergents.
 |---|---|
 | **Tableau de bord** | Vue d'ensemble sur la période choisie : nombre de recharges, énergie, coût, prix moyen, répartition maison / extérieur, abonnement, dernières recharges. |
 | **Ajouter une recharge** | Saisie manuelle, à la maison ou sur une borne extérieure. L'heure de fin peut rester vide si votre tarif est à prix unique. Une énergie supérieure à ce que la batterie peut absorber (voir `capacite_batterie`) déclenche une demande de confirmation : c'est presque toujours une faute de frappe. |
-| **Importer un CSV** | Import du fichier exporté par la wallbox. |
+| **Importer un CSV** | Import du fichier exporté par la borne. |
 | **Historique** | Toutes les recharges dans un seul tableau qui défile : on choisit une ligne, puis **Modifier…** ou **Supprimer** (ou double-clic, Entrée, Suppr, clic droit). Filtres par lieu et par période, **recherche** pendant la frappe (opérateur, lieu, tarif, date, montant) et **tri en cliquant sur un titre de colonne**. Une ligne résume la sélection. |
-| **Statistiques** | Graphique énergie et coût par mois, répartition par tarif et par opérateur, écart avec le coût annoncé par la wallbox. |
-| **Kilométrage** | Relevés du compteur, consommation et coût au 100 km, et estimation de la **part d'énergie non enregistrée** (recharges chez des proches, bornes gratuites). Une phrase renvoie à la page « Essence ou électrique ? » pour la comparaison avec une voiture essence. |
+| **Statistiques** | Graphique énergie et coût par mois, répartition par tarif et par opérateur, écart avec le coût annoncé par la borne. |
+| **Kilométrage** | Relevés du compteur, consommation et coût aux 100 km, et estimation de la **part d'énergie non enregistrée** (recharges chez des proches, bornes gratuites). Une phrase renvoie à la page « Essence ou électrique ? » pour la comparaison avec une voiture essence. |
 | **⛽ Essence ou électrique ?** | La comparaison avec une voiture essence, sur « Toute la période » (avec le détail année par année) ou sur une année, à partir des kilomètres entre vos relevés du compteur : ce que l'essence vous aurait coûté, ce que vous avez payé en électricité, l'économie. Un bouton mène aux Paramètres pour changer la voiture de comparaison ou le prix du litre. |
-| **Exporter** | Excel (tableau détaillé + synthèse) ou PDF (rapport imprimable), sur la sélection de votre choix. |
+| **Exporter** | Excel (tableau détaillé et synthèse) ou PDF (rapport imprimable), sur la sélection de votre choix. |
 | **Restaurer** | Liste les sauvegardes disponibles avec leur date et leur nombre de recharges, et permet d'en remettre une en service. L'état actuel est mis de côté au passage : une restauration faite par erreur s'annule en restaurant la sauvegarde la plus récente. |
 | **Tarifs** | Grille tarifaire : **modifier** une période, en **ajouter** une quand vos prix changent, la supprimer, et recalculer tous les coûts. Plus besoin d'éditer `tarifs.json` à la main. En bas de page, les **frais de vos cartes de recharge** (achat d'une carte, ou abonnement mensuel ou annuel à un réseau), comptés à part comme l'abonnement de la maison. |
 | **⚙️ Paramètres** | Les réglages de la voiture et de la borne (capacité de la batterie, rendement de charge, correction de l'horloge du CSV, puissance de charge de la borne), la **voiture essence de comparaison** (consommation en L/100 km et prix du litre, à saisir vous-même), la **part de l'abonnement liée à la voiture**, l'**apparence** (thème clair ou sombre, appliqué au prochain démarrage) et l'emplacement de vos données, avec un bouton pour ouvrir ce dossier. |
@@ -212,7 +212,7 @@ Quel que soit le dossier, il contient :
 | `tarifs.json` | Grille tarifaire et réglages (voir plus bas). |
 | `tarifs.json.avant` | La copie de `tarifs.json` juste avant la dernière modification. C'est la sortie de secours que propose le message d'erreur si `tarifs.json` est illisible. |
 | `backups\` | Les 15 dernières sauvegardes automatiques de `recharges.json` (`recharges_<date>_<heure>.json`) **et** de `tarifs.json` (`tarifs_<date>_<heure>.json`), plus la première sauvegarde de chaque journée, gardée un mois (`recharges_jour_<date>.json`, `tarifs_jour_<date>.json`). |
-| `*.csv` | Les exports de la wallbox déposés là sont proposés directement à l'import. |
+| `*.csv` | Les exports de la borne déposés là sont proposés directement à l'import. |
 
 `tarifs.json` est créé au premier démarrage, avec une grille vide et des
 réglages neutres. `recharges.json` apparaît à votre première recharge.
@@ -265,7 +265,7 @@ les quatre réglages de la voiture et de la borne ci-dessous dans la page
 |---|---|
 | `capacite_batterie` | Capacité de la batterie en kWh (0 = inconnue). Sert à repérer une énergie impossible à la saisie, et de marge au contrôle kilométrique. |
 | `rendement_charge` | Part de l'énergie qui arrive réellement à la batterie (0.9 = 90 %, le reste part en chaleur). |
-| `correction_csv_minutes` | Décalage appliqué aux heures du CSV de la wallbox (-60 = recule d'une heure). Corrige la dérive d'horloge du chargeur. La changer dans ⚙️ Paramètres replace aussi les recharges déjà importées et recalcule leur coût. |
+| `correction_csv_minutes` | Décalage appliqué aux heures du CSV de la borne (-60 = recule d'une heure). Corrige la dérive d'horloge du chargeur. La changer dans ⚙️ Paramètres replace aussi les recharges déjà importées et recalcule leur coût. |
 | `puissance_borne_kw` | Puissance de charge de la borne, en kW (facultative ; 0 = inconnue). Renseignée, l'énergie d'une recharge est comptée à cette puissance dès le début, au lieu d'être étalée jusqu'à l'heure de fin : les heures creuses sont mieux comptées. La changer dans ⚙️ Paramètres recalcule le coût des recharges à la maison. |
 | `tarifs` | La grille : une entrée par période tarifaire. |
 | `frais_cartes` | Les frais des cartes de recharge : carte, type (`unique`, `mensuel` ou `annuel`), date (d'achat ou de début), fin (abonnement terminé, sinon `null`), montant (par mois ou par an pour un abonnement ; l'annuel compte en entier au début puis à chaque date anniversaire). Absente des fichiers d'avant la 2.0.5 : aucun frais. |
@@ -320,7 +320,7 @@ Deux conséquences à garder en tête :
 
 - la **consommation** affichée ne porte que sur l'énergie enregistrée : elle
   est donc plus basse que celle affichée par la voiture ;
-- le **coût au 100 km ne compte que les recharges saisies** : si l'énergie
+- le **coût aux 100 km ne compte que les recharges saisies** : si l'énergie
   non enregistrée a été payée (recharge oubliée), le coût réel est plus élevé.
   Son origine et son prix ne sont pas connus d'après les seuls relevés.
 
@@ -341,10 +341,11 @@ l'état de charge au début et à la fin.
 
 ---
 
-## Import du CSV de la wallbox
+## Import du CSV de la borne
 
 Dans la page **Importer un CSV**, choisissez le fichier exporté par votre
-borne (depuis son application ou son site : « exporter », « historique »).
+borne domestique (wallbox), depuis son application ou son site
+(« exporter », « historique »).
 Un fichier déposé dans le dossier de vos données y est aussi proposé
 directement. L'application :
 
@@ -355,11 +356,17 @@ directement. L'application :
   qui se chevauchent) et ne la compte pas deux fois ; deux sessions
   distinctes de même énergie restent deux sessions ;
 - **remplace** une saisie manuelle par les données précises du CSV quand il
-  s'agit de la même session (même énergie, début à moins de 2 h d'écart) ;
+  s'agit sûrement de la même session : leurs heures se recouvrent et
+  l'énergie concorde (à 0,1 kWh ou 1 % près) ;
+- en cas de doute (heures proches sans se recouvrir, énergie différente, ou
+  plusieurs saisies possibles), ne remplace rien d'office : avant
+  d'enregistrer, la fenêtre « Recharges à vérifier » montre la ligne du
+  fichier et la saisie, et vous choisissez de garder les deux, de remplacer
+  la saisie ou d'ignorer la ligne ;
 - n'écrit rien du tout s'il n'y a aucune nouveauté.
 
 **Quel format ?** Six colonnes, dans cet ordre : identifiant du chargeur,
-début, fin, énergie, durée, coût. C'est la disposition des exports de wallbox
+début, fin, énergie, durée, coût. C'est la disposition des exports de bornes
 domestiques. Le lecteur s'accommode du séparateur (virgule ou point-virgule),
 de la virgule ou du point décimal, des unités collées ou non au nombre
 (`30.000kWh` comme `30,000 kWh`), et des dates écrites `2026-03-02 23:00:00`
@@ -392,7 +399,7 @@ orange.
 
 Ne copiez **pas** le dossier `dist\` : il mélange l'application et vos
 données — votre historique, votre grille tarifaire, la capacité de votre
-batterie, la dérive d'horloge de votre wallbox.
+batterie, la dérive d'horloge de votre borne.
 
 ```bash
 py preparer_distribution.py
@@ -427,7 +434,7 @@ build.bat
 Le script reconstruit `dist\Recharges-VE\Recharges-VE.exe`, puis lance une
 **vérification automatique** et affiche son compte rendu : toutes les pages du
 menu sont ouvertes, les exports Excel et PDF testés, et les fichiers joints (icône,
-flèche des listes), le thème clair et la traduction française des boutons de
+flèche des listes), le thème et la traduction française des boutons de
 Qt contrôlés. Tout doit être `OK` ; l'exécutable rend le code 1 sinon.
 
 Cette vérification est lançable seule :
@@ -523,7 +530,7 @@ les tests écrits au format pytest (une trentaine sont alors sautés sans
 avertissement) et ne lit pas `tests/conftest.py`, qui détourne les données
 vers un dossier temporaire pendant les tests.
 
-Plus de 800 tests couvrent le calcul des coûts (tarif simple, heures pleines / heures
+Plus de 1 400 tests couvrent le calcul des coûts (tarif simple, heures pleines / heures
 creuses, plage à cheval sur minuit, plages qui se chevauchent, recharge à
 cheval sur un changement de tarif, session d'une minute, date sans tarif,
 recharge sans heure de fin), la
