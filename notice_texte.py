@@ -86,6 +86,20 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "changement d'heure, la durée est celle vraiment écoulée : de "
          "01:30 à 04:30 la nuit où l'on avance l'heure, la voiture n'a "
          "chargé que deux heures."),
+        ("Sans borne à la maison",
+         "Une voiture branchée sur une simple prise se saisit de la même "
+         "façon, dans l'onglet Maison : l'application n'a besoin que des "
+         "heures et des kWh. Seule l'énergie demande un peu d'attention, "
+         "puisque aucune borne ne l'affiche. Le plus juste est une prise "
+         "avec compteur d'énergie, glissée entre le mur et le câble : elle "
+         "mesure ce qui est réellement tiré, donc ce qui vous est facturé. "
+         "Vérifiez qu'elle supporte l'intensité du câble pendant des "
+         "heures. À défaut, prenez l'énergie affichée par la voiture ou par "
+         "son application ; ou calculez-la d'après la batterie : de 40\xa0% "
+         "à 80\xa0% sur une batterie de 50\xa0kWh, 20\xa0kWh. Ces deux "
+         "derniers chiffres comptent ce qui est entré dans la batterie, un "
+         "peu moins que ce qui est sorti de la prise : le coût affiché sera "
+         "légèrement en dessous du coût réel."),
         ("Donner la durée plutôt que l'heure de fin",
          "La borne affiche souvent la durée de la charge, pas l'heure à "
          "laquelle elle s'est terminée. Tapez-la dans la case de l'heure de "
