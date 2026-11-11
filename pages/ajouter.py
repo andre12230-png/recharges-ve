@@ -19,10 +19,12 @@ from formulaire import (Formulaire, confirmer_chevauchement_maison,
                         confirmer_energie, confirmer_horodatage)
 from erreurs import erreur_en_clair
 from recharges import (ajouter_recharge_exterieur, ajouter_recharge_maison,
-                       ajouter_releve_km, dernier_choix_exterieur,
+                       ajouter_releve_km, charger_config,
+                       dernier_choix_exterieur, energie_depuis_pourcentages,
                        lieux_deja_saisis)
 from suivi_saisie import marquer_enregistre
-from saisie import ErreurSaisie, lire_recharge_exterieur, lire_recharge_maison
+from saisie import (ErreurSaisie, lire_pourcentages, lire_recharge_exterieur,
+                    lire_recharge_maison)
 from formats import fmt_eur, fmt_kwh, fmt_prix_kwh
 from theme_qt import ROUGE, VERT
 
@@ -125,10 +127,70 @@ def _poser_maison(f: Formulaire):
     f.champ_date_heure(
         "Fin de la recharge (vide si tarif à prix unique ; l'heure seule "
         "suffit, ou une durée : « +6h12 »)", "champ_m_fin")
+    _poser_pourcentages(f)
     f.champ("Énergie consommée (kWh)", "champ_m_kwh")
     f.champ("Kilométrage du compteur (facultatif)", "champ_m_km")
     # Les cases a remplir s'encadrent de bleu tant qu'elles sont vides.
     f.exiger("champ_m_debut_jour", "champ_m_debut_heure", "champ_m_kwh")
+
+
+def _poser_pourcentages(f: Formulaire) -> None:
+    """Le niveau de la batterie au depart et a l'arrivee : deux cases
+    facultatives qui remplissent « Énergie consommée » (demande du
+    11/11/2026, pour qui recharge sur une simple prise, sans borne pour
+    afficher les kWh). Simple aide au calcul : seuls les kWh sont
+    enregistres."""
+    f.champ_pourcentages(
+        "Niveau de la batterie, au départ et à l'arrivée (facultatif : "
+        "calcule l'énergie)", "champ_m_pct")
+    # La phrase sous les cases : d'ou vient le chiffre calcule, ou pourquoi
+    # les cases sont grisees. Cachee tant qu'il n'y a rien a dire.
+    f.note_pourcentages = f.aide("")
+    f.note_pourcentages.hide()
+    depart = f.cases["champ_m_pct_depart"]
+    arrivee = f.cases["champ_m_pct_arrivee"]
+    if charger_config()["capacite_batterie"] <= 0:
+        # Sans la capacite, rien a calculer : on le dit plutot que de
+        # laisser deux cases qui ne font rien.
+        depart.setEnabled(False)
+        arrivee.setEnabled(False)
+        f.note_pourcentages.setText(
+            "Pour calculer l'énergie d'après ces deux niveaux, indiquez la "
+            "capacité de la batterie dans la page Paramètres.")
+        f.note_pourcentages.show()
+        return
+    # textEdited, et non textChanged : seule une frappe recalcule. Ce que
+    # l'appli ecrit elle-meme dans ces cases (une saisie remise apres un
+    # changement de page) ne doit pas ecraser une energie corrigee a la main.
+    depart.textEdited.connect(lambda _texte: _calculer_energie(f))
+    arrivee.textEdited.connect(lambda _texte: _calculer_energie(f))
+
+
+def _calculer_energie(f: Formulaire) -> None:
+    """Remplit « Énergie consommée » d'apres les deux niveaux, des qu'ils
+    sont lisibles. En cours de frappe, un niveau incomplet ou incoherent ne
+    fait rien et ne reproche rien : le controle a lieu a l'enregistrement."""
+    try:
+        niveaux = lire_pourcentages(
+            f.texte("champ_m_pct_depart"), f.texte("champ_m_pct_arrivee"),
+            "champ_m_pct_depart", "champ_m_pct_arrivee")
+    except ErreurSaisie:
+        return
+    if niveaux is None:
+        return
+    config = charger_config()
+    kwh = energie_depuis_pourcentages(*niveaux, config)
+    if kwh is None:
+        return
+    f.ecrire("champ_m_kwh", f"{kwh:.2f}".replace(".", ","))
+    dans_la_batterie = (config["capacite_batterie"]
+                        * (niveaux[1] - niveaux[0]) / 100)
+    f.note_pourcentages.setText(
+        f"{fmt_kwh(kwh)} pris à la prise, pour {fmt_kwh(dans_la_batterie)} "
+        "arrivés dans la batterie (rendement de charge : "
+        f"{config['rendement_charge'] * 100:.0f}\xa0%). Vous pouvez corriger "
+        "ce chiffre.")
+    f.note_pourcentages.show()
 
 
 def _poser_exterieur(f: Formulaire):
@@ -214,6 +276,11 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
             f.texte("champ_m_debut_jour"), f.texte("champ_m_debut_heure"),
             f.texte("champ_m_fin_jour"), f.texte("champ_m_fin_heure"),
             f.texte("champ_m_kwh"), f.texte("champ_m_km"))
+        # Deux niveaux incoherents (arrivee sous le depart) : l'energie
+        # affichee n'en vient pas, mieux vaut le dire avant d'enregistrer.
+        lire_pourcentages(
+            f.texte("champ_m_pct_depart"), f.texte("champ_m_pct_arrivee"),
+            "champ_m_pct_depart", "champ_m_pct_arrivee")
     except ErreurSaisie as e:
         f.erreur(e.champ, e.message)
         return
@@ -240,7 +307,10 @@ def enregistrer_maison(fenetre, f: Formulaire) -> None:
               ok=releve_pris)
     # Formulaire vide : un second clic ne peut plus creer un doublon.
     f.mettre_maintenant("champ_m_debut")
-    f.vider("champ_m_fin_jour", "champ_m_fin_heure", "champ_m_kwh")
+    f.vider("champ_m_fin_jour", "champ_m_fin_heure", "champ_m_kwh",
+            "champ_m_pct_depart", "champ_m_pct_arrivee")
+    if f.cases["champ_m_pct_depart"].isEnabled():
+        f.note_pourcentages.hide()          # grisees, la phrase reste
     _enregistre(f, "champ_m_km", lu["km"] is not None and not releve_pris)
     fenetre._maj_bilan()
 

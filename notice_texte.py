@@ -94,12 +94,17 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "avec compteur d'énergie, glissée entre le mur et le câble : elle "
          "mesure ce qui est réellement tiré, donc ce qui vous est facturé. "
          "Vérifiez qu'elle supporte l'intensité du câble pendant des "
-         "heures. À défaut, prenez l'énergie affichée par la voiture ou par "
-         "son application ; ou calculez-la d'après la batterie : de 40\xa0% "
-         "à 80\xa0% sur une batterie de 50\xa0kWh, 20\xa0kWh. Ces deux "
-         "derniers chiffres comptent ce qui est entré dans la batterie, un "
-         "peu moins que ce qui est sorti de la prise : le coût affiché sera "
-         "légèrement en dessous du coût réel."),
+         "heures. À défaut, l'application la calcule : tapez le niveau de "
+         "la batterie au départ et à l'arrivée, en pour cent, dans les deux "
+         "cases prévues, et la case « Énergie consommée » se remplit. De "
+         "40\xa0% à 80\xa0% sur une batterie de 50\xa0kWh, 20\xa0kWh sont "
+         "entrés dans la batterie ; avec un rendement de charge de 90\xa0%, "
+         "il en a fallu 22,22 à la prise, et c'est ce chiffre qui est "
+         "retenu, puisque c'est lui qui vous est facturé. Le calcul "
+         "s'appuie sur la capacité de la batterie et le rendement de charge "
+         "indiqués dans les Paramètres : sans capacité, les deux cases sont "
+         "grisées. Le chiffre calculé reste corrigeable, et seuls les kWh "
+         "sont enregistrés, pas les niveaux."),
         ("Donner la durée plutôt que l'heure de fin",
          "La borne affiche souvent la durée de la charge, pas l'heure à "
          "laquelle elle s'est terminée. Tapez-la dans la case de l'heure de "

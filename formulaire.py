@@ -166,6 +166,29 @@ class Formulaire:
         if remplir_maintenant:
             self.mettre_maintenant(nom)
 
+    def champ_pourcentages(self, libelle: str, nom: str) -> None:
+        """Un libelle, puis DEUX petites cases sur une ligne : « de [ ] % à
+        [ ] % ». Rangees sous « <nom>_depart » et « <nom>_arrivee », elles
+        partagent leur ligne de message, comme les deux cases d'une date."""
+        self._libelle(libelle)
+        ligne = QHBoxLayout()
+        ligne.setSpacing(8)
+        for mot, suffixe in (("de", "depart"), ("% à", "arrivee")):
+            etiquette = QLabel(mot)
+            etiquette.setObjectName("LibelleChamp")
+            ligne.addWidget(etiquette)
+            case = QLineEdit()
+            case.setFixedWidth(70)
+            self._brancher_entree(case)
+            ligne.addWidget(case)
+            self.cases[f"{nom}_{suffixe}"] = case
+        pour_cent = QLabel("%")
+        pour_cent.setObjectName("LibelleChamp")
+        ligne.addWidget(pour_cent)
+        ligne.addStretch(1)
+        self._disposition.addLayout(ligne)
+        self._ligne_de_message(f"{nom}_depart", f"{nom}_arrivee")
+
     def liste(self, libelle: str, nom: str, valeurs: list[str],
               defaut: str = "") -> QComboBox:
         """Une liste deroulante dans laquelle on peut aussi taper (un

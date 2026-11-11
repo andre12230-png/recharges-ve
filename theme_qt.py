@@ -432,6 +432,12 @@ def feuille_de_style() -> str:
     QWidget#Formulaire QLineEdit:focus, QWidget#Formulaire QComboBox:focus {{
         border: 2px solid {SB_SURVOL_CADRE}; padding: 3px 5px;
     }}
+    /* Case grisee (les niveaux de batterie sans capacite connue,
+       11/11/2026) : le fond du formulaire et un bord eteint, pour qu'on ne
+       croie pas pouvoir y taper. */
+    QWidget#Formulaire QLineEdit:disabled {{
+        border: 1px solid {CONTOUR_ETEINT}; background: {FOND_CARTE};
+    }}
     /* Case obligatoire encore vide (formulaire.exiger, 09/10/2026) : cadre
        bleu de 2 px ; le padding baisse d'autant pour que le texte ne bouge
        pas. Remplie, elle reprend le cadre ordinaire. */

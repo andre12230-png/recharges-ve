@@ -460,6 +460,36 @@ def lire_recharge_maison(jour_debut: str, heure_debut: str,
     return {"debut": debut, "fin": fin, "kwh": kwh, "km": km}
 
 
+def lire_pourcentages(texte_depart: str, texte_arrivee: str,
+                      champ_depart: str,
+                      champ_arrivee: str) -> tuple[float, float] | None:
+    """Le niveau de la batterie au depart et a l'arrivee, en pour cent.
+
+    Rend None tant qu'une des deux cases est vide : elles sont facultatives
+    et ne servent qu'a calculer l'energie (demande du 11/11/2026). Le signe
+    « % » tape derriere le nombre est accepte."""
+    if not texte_depart.strip() or not texte_arrivee.strip():
+        return None
+    niveaux = []
+    for texte, champ in ((texte_depart, champ_depart),
+                         (texte_arrivee, champ_arrivee)):
+        niveau = lire_nombre(texte.replace("%", ""), champ,
+                             "le niveau de la batterie")
+        if niveau > 100:
+            raise ErreurSaisie(champ,
+                               "Un niveau de batterie va de 0 à 100\xa0%.")
+        niveaux.append(niveau)
+    depart, arrivee = niveaux
+    if arrivee <= depart:
+        # « 40,5 » et non « 40.5 » : virgule decimale, comme a la saisie.
+        rappel = f"{depart:g}".replace(".", ",")
+        raise ErreurSaisie(
+            champ_arrivee,
+            "Le niveau à l'arrivée doit dépasser celui du départ "
+            f"({rappel}\xa0%).")
+    return depart, arrivee
+
+
 def lire_recharge_exterieur(jour: str, heure: str, texte_kwh: str,
                             texte_cout: str, texte_prix: str,
                             texte_km: str, *,

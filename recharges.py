@@ -2031,6 +2031,22 @@ def energie_maximale_par_charge(config: dict | None = None) -> float | None:
     return capacite / rendement
 
 
+def energie_depuis_pourcentages(depart: float, arrivee: float,
+                                config: dict | None = None) -> float | None:
+    """L'energie prise a la prise pour faire passer la batterie de `depart`
+    a `arrivee` (en pour cent), ou None si la capacite n'est pas renseignee.
+
+    Pour qui recharge sur une simple prise : aucune borne n'affiche les kWh
+    (demande du 11/11/2026). De 40 a 80 % sur 50 kWh, 20 kWh entrent dans la
+    batterie ; avec un rendement de 90 %, il en a fallu 22,22 a la prise, et
+    ce sont eux qui sont factures. Simple aide au calcul : les pourcentages
+    ne sont pas enregistres."""
+    par_charge = energie_maximale_par_charge(config)
+    if par_charge is None:
+        return None
+    return round(par_charge * (arrivee - depart) / 100, 2)
+
+
 def energie_invraisemblable(kwh: float) -> str:
     """Explique pourquoi une energie saisie est impossible, sinon chaine vide.
 

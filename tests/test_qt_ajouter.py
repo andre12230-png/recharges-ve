@@ -70,6 +70,10 @@ def moteur(monkeypatch):
     monkeypatch.setattr(ajouter, "dernier_choix_exterieur",
                         lambda: ("Ionity", "Chargemap"))
     monkeypatch.setattr(ajouter, "lieux_deja_saisis", lambda: list(LIEUX))
+    # Batterie inventee : 50 kWh, rendement de charge de 90 %.
+    monkeypatch.setattr(ajouter, "charger_config",
+                        lambda: {"capacite_batterie": 50.0,
+                                 "rendement_charge": 0.90})
     monkeypatch.setattr(formulaire, "_demander", demander)
     monkeypatch.setattr(formulaire, "energie_invraisemblable", lambda kwh: "")
     monkeypatch.setattr(formulaire, "horodatage_deja_utilise",
@@ -275,6 +279,82 @@ def test_entree_enregistre(page, moteur):
     remplir(m, champ_m_kwh="20")
     QTest.keyClick(m.cases["champ_m_kwh"], Qt.Key_Return)
     assert len(moteur["maison"]) == 1
+
+
+# ---------- Maison : niveau de la batterie (demande du 11/11/2026) ----------
+
+def taper(f, nom, texte):
+    """Comme une frappe : la case change ET Qt previent que c'est
+    l'utilisateur (textEdited). Ce que l'appli ecrit seule ne recalcule
+    rien."""
+    f.ecrire(nom, texte)
+    f.cases[nom].textEdited.emit(texte)
+
+
+def test_les_pourcentages_remplissent_l_energie(page):
+    m = page.maison
+    taper(m, "champ_m_pct_depart", "40")
+    assert m.texte("champ_m_kwh") == ""         # il manque l'arrivee
+    taper(m, "champ_m_pct_arrivee", "80")
+    assert m.texte("champ_m_kwh") == "22,22"
+    # La phrase dit d'ou vient le chiffre, et qu'il reste corrigeable.
+    assert "22,22\xa0kWh" in m.note_pourcentages.text()
+    assert "90\xa0%" in m.note_pourcentages.text()
+    assert not m.note_pourcentages.isHidden()
+
+
+def test_pourcentages_incoherents_ne_touchent_pas_l_energie(page):
+    m = page.maison
+    remplir(m, champ_m_kwh="18")
+    taper(m, "champ_m_pct_depart", "80")
+    taper(m, "champ_m_pct_arrivee", "40")
+    assert m.texte("champ_m_kwh") == "18"
+    assert messages(m) == {}                    # pas de reproche en cours de frappe
+
+
+def test_pourcentages_incoherents_refuses_a_l_enregistrement(page, moteur):
+    m = page.maison
+    remplir(m, champ_m_kwh="18")
+    taper(m, "champ_m_pct_depart", "80")
+    taper(m, "champ_m_pct_arrivee", "40")
+    m.bouton.click()
+    assert m.message("champ_m_pct_arrivee").startswith(
+        "Le niveau à l'arrivée doit dépasser")
+    assert moteur["maison"] == []
+
+
+def test_l_energie_calculee_s_enregistre_et_les_cases_se_vident(page, moteur):
+    m = page.maison
+    taper(m, "champ_m_pct_depart", "40")
+    taper(m, "champ_m_pct_arrivee", "80")
+    m.bouton.click()
+    assert moteur["maison"][0][2] == 22.22
+    assert m.texte("champ_m_pct_depart") == m.texte("champ_m_pct_arrivee") == ""
+    assert m.note_pourcentages.isHidden()
+
+
+def test_l_energie_corrigee_a_la_main_fait_foi(page, moteur):
+    m = page.maison
+    taper(m, "champ_m_pct_depart", "40")
+    taper(m, "champ_m_pct_arrivee", "80")
+    remplir(m, champ_m_kwh="23,1")              # lu sur une prise a compteur
+    m.bouton.click()
+    assert moteur["maison"][0][2] == 23.1
+
+
+def test_sans_capacite_les_cases_sont_grisees(qapp, moteur, monkeypatch):
+    """Capacite de la batterie non renseignee : rien a calculer. Les cases
+    se grisent et la phrase dit ou l'indiquer."""
+    monkeypatch.setattr(ajouter, "charger_config",
+                        lambda: {"capacite_batterie": 0.0,
+                                 "rendement_charge": 0.90})
+    p = ajouter.construire(FausseFenetre())
+    m = p.maison
+    assert not m.cases["champ_m_pct_depart"].isEnabled()
+    assert not m.cases["champ_m_pct_arrivee"].isEnabled()
+    assert "Paramètres" in m.note_pourcentages.text()
+    assert not m.note_pourcentages.isHidden()
+    p.deleteLater()
 
 
 # ---------- Extérieur ----------
