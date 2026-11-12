@@ -12,8 +12,9 @@ from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel,
                                QPushButton, QVBoxLayout, QWidget)
 
 from composants import carte, paragraphe, texte_a_lire, texte_fixe
+from constantes import ENERGIE_MAX_SANS_CAPACITE
 from erreurs import erreur_en_clair
-from formats import fmt_date_fr, fmt_kwh
+from formats import fmt_date_fr, fmt_kwh, fmt_nombre
 from recharges import (FormatCsvInconnu, ImportAnnule, apercu_csv,
                        dossier_donnees, importer_csv_maison,
                        retenir_correspondance)
@@ -94,18 +95,43 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
     trop = res.get("trop_kwh") or []
     if trop:
         alerte = True
+        # Capacité non renseignée : c'est le plafond fixe du moteur qui a
+        # joué ; le message le dit, et envoie renseigner la capacité (audit
+        # du 11/11/2026, V1).
+        if res.get("capacite_connue", True):
+            limite = "ce que la batterie peut absorber en une charge"
+            conseil = "Vérifiez la capacité de la batterie dans Paramètres"
+        else:
+            limite = (f"{fmt_nombre(ENERGIE_MAX_SANS_CAPACITE, 0)}\xa0kWh, "
+                      "plus qu'une voiture ne peut absorber en une charge "
+                      "(des Wh lus comme des kWh, par exemple)")
+            conseil = "Renseignez la capacité de la batterie dans Paramètres"
         if len(trop) == 1:
             texte += ("\nATTENTION : 1 session mise de côté, donc pas "
-                      "enregistrée : son énergie dépasse ce que la batterie "
-                      "peut absorber en une charge.")
+                      f"enregistrée : son énergie dépasse {limite}.")
         else:
             texte += (f"\nATTENTION : {len(trop)} sessions mises de côté, "
-                      "donc pas enregistrées : leur énergie dépasse ce que la "
-                      "batterie peut absorber en une charge.")
-        texte += (" Vérifiez la capacité de la batterie dans Paramètres ; si "
-                  "une recharge est réelle, saisissez-la à la main :")
+                      f"donc pas enregistrées : leur énergie dépasse {limite}.")
+        texte += (f" {conseil} ; si une recharge est réelle, saisissez-la à "
+                  "la main :")
         for t in trop:
             texte += f"\n  • {fmt_date_fr(t['date'])}, {fmt_kwh(t['kwh'])}"
+    # Recharges déjà importées dont l'énergie a changé depuis (corrigées à
+    # la main dans l'Historique) : ni doublées ni écrasées, mais dites, pour
+    # que l'écart avec le fichier ne passe pas inaperçu (audit du
+    # 11/11/2026, V3).
+    differentes = res.get("energie_differente") or []
+    if len(differentes) == 1:
+        texte += ("\nÀ savoir : 1 recharge déjà importée n'a pas la même "
+                  "énergie que dans le fichier (corrigée à la main ?). Elle "
+                  "est gardée telle quelle :")
+    elif differentes:
+        texte += (f"\nÀ savoir : {len(differentes)} recharges déjà importées "
+                  "n'ont pas la même énergie que dans le fichier (corrigées "
+                  "à la main ?). Elles sont gardées telles quelles :")
+    for d in differentes:
+        texte += (f"\n  • {fmt_date_fr(d['date'])} : {fmt_kwh(d['kwh'])} "
+                  f"enregistrés, {fmt_kwh(d['kwh_fichier'])} dans le fichier")
     return texte, alerte
 
 

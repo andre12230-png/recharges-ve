@@ -1027,15 +1027,24 @@ class TestFichiers(unittest.TestCase):
         self.assertEqual(
             [x["kwh"] for x in r.charger_donnees()["recharges"]], [20.0])
 
-    def test_import_sans_capacite_connue_ne_met_rien_de_cote(self):
-        """Capacite non renseignee : on ne peut rien affirmer, comme pour la
-        question « Energie inhabituelle » a la saisie."""
+    def test_import_sans_capacite_connue_plafond_fixe(self):
+        """Capacité non renseignée : le plafond fixe prend le relais, comme
+        pour la question « Énergie inhabituelle » à la saisie. Remplace la
+        règle du 03/11/2026 (« on ne peut rien affirmer », rien n'était mis
+        de côté) : 12 500 kWh entraient sans un mot chez qui n'avait pas
+        rempli cette case facultative (audit du 11/11/2026, V1). Une
+        recharge ordinaire passe toujours."""
         contenu = json.loads(r.TARIFS_FILE.read_text(encoding="utf-8"))
         contenu["capacite_batterie"] = 0
         self.ecrire_tarifs(contenu)
-        res = r.importer_csv_maison(self.ecrire_csv([self.LIGNE_12500_KWH]))
+        res = r.importer_csv_maison(self.ecrire_csv([self.LIGNE_20_KWH,
+                                                     self.LIGNE_12500_KWH]))
         self.assertEqual(res["ajoutes"], 1)
-        self.assertEqual(res["trop_kwh"], [])
+        self.assertEqual(res["trop_kwh"],
+                         [{"date": "2026-03-07T23:00", "kwh": 12500.0}])
+        self.assertIs(res["capacite_connue"], False)
+        self.assertEqual(
+            [x["kwh"] for x in r.charger_donnees()["recharges"]], [20.0])
 
     # --- ce qui est ecrit doit pouvoir etre relu (audit a blanc, 03/11) ---
 

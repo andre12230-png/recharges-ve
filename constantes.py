@@ -38,6 +38,16 @@ CARTES = ["Chargemap", "Ionity", "Tesla", "Plugsurfing", "ChargeMyHyundai",
           "Direct (CB)", "Autre"]
 
 
+# Plafond d'une seule charge, en kWh, quand la capacite de la batterie n'est
+# pas renseignee (elle est facultative). Les plus grosses batteries de
+# voiture restent en dessous ; au-dela, c'est presque toujours une erreur
+# d'unite (des Wh pris pour des kWh). SEUL endroit ou ce nombre est ecrit :
+# le moteur, la page Importer et la notice le lisent ici. Avant l'audit du
+# 11/11/2026 (V1), capacite inconnue voulait dire « aucun controle » :
+# 30 000 kWh passaient sans question, a la saisie comme a l'import.
+ENERGIE_MAX_SANS_CAPACITE = 150.0
+
+
 # Nombre de recharges affichees d'un coup dans l'Historique. Chaque ligne coute
 # une dizaine d'elements graphiques a construire : au-dela d'une trentaine,
 # l'affichage devient tres lent (plus de 12 s pour 250 lignes). On decoupe donc

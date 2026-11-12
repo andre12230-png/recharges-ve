@@ -33,6 +33,8 @@ except ImportError:          # pas Windows
     import fcntl
 
 import journal_erreurs
+# Le plafond d'énergie sans capacité de batterie : écrit dans constantes.py.
+from constantes import ENERGIE_MAX_SANS_CAPACITE
 from erreurs import erreur_en_clair
 from formats import fmt_kwh, fmt_nb_recharges, fmt_nombre
 # Vieilles sauvegardes de backups/ a la Corbeille (decision du 26/10/2026).
@@ -1679,14 +1681,21 @@ def _trouver_tarif(date_debut: datetime, tarifs: list[dict]) -> dict | None:
     celle qui commence le plus tard qui l'emporte : la plus récente, souvent
     une exception ajoutée dans une période plus longue. Avant, c'était la
     première dans l'ordre du fichier, et le prix dépendait de cet ordre
-    (audits du 26/10/2026, constat #11)."""
+    (audits du 26/10/2026, constat #11).
+
+    Deux périodes qui commencent le MÊME jour : la dernière saisie
+    l'emporte (la dernière de la liste, enregistrer_tarif ajoutant à la
+    fin). C'est ce qu'annonce l'avertissement de la grille ; avant, c'était
+    la première, et un prix corrigé en ajoutant une période au lieu de
+    modifier l'ancienne ne s'appliquait jamais (audit du 11/11/2026, V2)."""
     d = date_debut.date()
     retenu, debut_retenu = None, None
     for t in tarifs:
         t_debut = datetime.fromisoformat(t["debut"]).date()
         t_fin = datetime.fromisoformat(t["fin"]).date() if t.get("fin") else None
         if d >= t_debut and (t_fin is None or d <= t_fin):
-            if retenu is None or t_debut > debut_retenu:
+            # « >= » et non « > » : à début égal, la suivante remplace.
+            if retenu is None or t_debut >= debut_retenu:
                 retenu, debut_retenu = t, t_debut
     return retenu
 
@@ -2047,6 +2056,20 @@ def energie_depuis_pourcentages(depart: float, arrivee: float,
     return round(par_charge * (arrivee - depart) / 100, 2)
 
 
+def plafond_energie_par_charge(config: dict | None = None
+                               ) -> tuple[float, bool]:
+    """L'énergie au-delà de laquelle une recharge est invraisemblable, et
+    si ce plafond vient de la capacité renseignée (True) ou, faute de
+    capacité, du plafond fixe (False).
+
+    Une seule règle pour la question « Énergie inhabituelle » de la saisie
+    et pour l'import, qui met de côté une session au-delà."""
+    maximum = energie_maximale_par_charge(config)
+    if maximum is None:
+        return ENERGIE_MAX_SANS_CAPACITE, False
+    return maximum, True
+
+
 def energie_invraisemblable(kwh: float) -> str:
     """Explique pourquoi une energie saisie est impossible, sinon chaine vide.
 
@@ -2054,13 +2077,22 @@ def energie_invraisemblable(kwh: float) -> str:
     charge : au-dela, c'est une faute de frappe (85 au lieu de 35...). On se
     contente d'avertir, l'utilisateur reste libre de confirmer — la capacite
     peut ne pas etre renseignee correctement, ou la voiture changer.
+
+    Capacité non renseignée : le plafond fixe prend le relais, et le message
+    dit où la renseigner (audit du 11/11/2026, V1).
     """
     config = charger_config()
     capacite = config["capacite_batterie"]
     rendement = config["rendement_charge"]
-    maximum = energie_maximale_par_charge(config)
-    if maximum is None or kwh <= 0 or kwh <= maximum:
+    maximum, capacite_connue = plafond_energie_par_charge(config)
+    if kwh <= 0 or kwh <= maximum:
         return ""
+    if not capacite_connue:
+        return (f"{fmt_kwh(kwh)} dépasse ce qu'une voiture électrique peut "
+                f"absorber en une seule charge (plus de "
+                f"{fmt_nombre(maximum, 0)}\xa0kWh). La capacité de votre "
+                "batterie n'est pas renseignée : indiquez-la dans Paramètres "
+                "pour un contrôle plus juste.")
     return (f"{fmt_kwh(kwh)} dépasse ce que votre batterie peut absorber en "
             f"une seule charge : {fmt_nombre(capacite, 1)}\xa0kWh, soit "
             f"{fmt_nombre(maximum, 1)}\xa0kWh pris à la prise (rendement de "
@@ -3227,8 +3259,9 @@ def _meme_session(debut: datetime, kwh: float,
 
     D'abord, une recharge importée qui a gardé l'heure de début écrite par
     la borne (« debut_borne », avant correction d'horloge) : même heure de
-    borne, même énergie à trois décimales et même chargeur, c'est la même
-    ligne du CSV, quel que soit le réglage de la correction. Avant l'analyse
+    borne et même chargeur, c'est la même ligne du CSV, quel que soit le
+    réglage de la correction, et même si l'énergie a été corrigée à la main
+    depuis (audit du 11/11/2026, V3). Avant l'analyse
     du 16/10/2026, une recharge courte réimportée après un changement de
     correction (15 min, décalée de 20 min) ne recouvrait plus la première :
     elle était ajoutée une seconde fois.
@@ -3243,10 +3276,15 @@ def _meme_session(debut: datetime, kwh: float,
     S'il y en a plusieurs, la plus proche dans le temps l'emporte.
     """
     if debut_borne is not None:
+        # L'énergie n'entre plus dans cette comparaison (audit du
+        # 11/11/2026, V3) : une recharge importée puis corrigée à la main
+        # (30 kWh ramenés à 28) n'était plus reconnue, et le réimport du
+        # même fichier l'ajoutait une seconde fois. Une borne ne commence
+        # pas deux sessions à la même seconde : l'heure de borne et le
+        # chargeur suffisent. L'écart d'énergie est signalé par l'import.
         for _debut_exist, r_exist in deja:
             if (r_exist.get("source") == "csv_import"
                     and _heure_borne(r_exist) == debut_borne
-                    and _meme_energie_csv(r_exist, kwh)
                     and _memes_chargeurs(chargeur, r_exist.get("chargeur"))):
                 return r_exist
 
@@ -3726,8 +3764,13 @@ def _importer_csv(chemin: str | Path, ignorer_zero: bool,
     # (des Wh lus comme des kWh, par exemple) : mises de côté, PAS
     # enregistrées, et listées dans le compte rendu (décision d'André du
     # 03/11/2026). Avant, elles entraient dans les données sans un mot.
+    # Capacité non renseignée : le plafond fixe prend le relais (audit du
+    # 11/11/2026, V1 ; avant, rien n'était mis de côté dans ce cas).
     trop_kwh: list[dict] = []
-    energie_max = energie_maximale_par_charge(config)
+    energie_max, capacite_connue = plafond_energie_par_charge(config)
+    # Recharges déjà importées dont l'énergie n'est plus celle du fichier
+    # (corrigées à la main) : gardées telles quelles, et signalées (V3).
+    energie_differente: list[dict] = []
 
     for serial, s_debut, s_fin, kwh_str, duree, cout_str in records:
         kwh = float(kwh_str)
@@ -3769,6 +3812,13 @@ def _importer_csv(chemin: str | Path, ignorer_zero: bool,
                 proche["debut_borne"] = debut_borne.isoformat(
                     timespec="seconds")
                 completees += 1
+            # Reconnue par son heure de borne, mais avec une autre énergie :
+            # corrigée à la main depuis. Elle n'est ni doublée ni écrasée ;
+            # le compte rendu le dit (audit du 11/11/2026, V3).
+            elif not _meme_energie_csv(proche, kwh):
+                energie_differente.append({
+                    "date": proche.get("date"), "kwh": proche.get("kwh"),
+                    "kwh_fichier": round(kwh, 3)})
             continue
 
         # Une saisie à la main de la même session : sûre, elle sera
@@ -3779,7 +3829,7 @@ def _importer_csv(chemin: str | Path, ignorer_zero: bool,
 
         # Après le contrôle des doublons : une session déjà enregistrée n'est
         # pas signalée à chaque nouvel import du même fichier.
-        if energie_max is not None and kwh > energie_max:
+        if kwh > energie_max:
             trop_kwh.append({"date": debut.isoformat(timespec="minutes"),
                              "kwh": round(kwh, 3)})
             continue
@@ -3871,6 +3921,8 @@ def _importer_csv(chemin: str | Path, ignorer_zero: bool,
             "a_verifier": a_verifier,
             "ignorees_par_choix": ignorees_par_choix,
             "zero_kwh": zero_kwh, "trop_kwh": trop_kwh,
+            "capacite_connue": capacite_connue,
+            "energie_differente": energie_differente,
             "parasites": parasites, "non_reconnues": non_reconnues}
 
 

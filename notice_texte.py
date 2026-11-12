@@ -8,7 +8,7 @@ Ce texte-la est accentue, contrairement aux commentaires du code : c'est de
 la lecture, pas du code.
 """
 
-from constantes import SAISIE_TELEPHONE
+from constantes import ENERGIE_MAX_SANS_CAPACITE, SAISIE_TELEPHONE
 from liens import AIDE_EN_LIGNE
 
 # Intitule du paragraphe retire de la notice publique (voir la fin du fichier).
@@ -237,7 +237,8 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "une nouvelle. Les recharges déjà saisies gardent ainsi le prix qui "
          "était le leur. Si deux périodes se chevauchent, c'est la plus "
          "récente (celle qui commence le plus tard) qui s'applique pendant "
-         "le chevauchement ; la page Tarifs vous le signale à "
+         "le chevauchement ; si deux périodes commencent le même jour, "
+         "c'est la dernière saisie. La page Tarifs vous le signale à "
          "l'enregistrement."),
         ("Recalculer les coûts",
          "Après un changement de grille, l'application propose de recalculer "
@@ -301,7 +302,10 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Rien n'est perdu en silence",
          "Les recharges déjà enregistrées ne sont pas dupliquées, et deux "
          "recharges distinctes du fichier (horaires qui ne se chevauchent "
-         "pas, ou deux bornes) restent deux recharges. Une "
+         "pas, ou deux bornes) restent deux recharges. Une recharge "
+         "importée dont vous avez corrigé l'énergie à la main n'est pas "
+         "ajoutée une seconde fois, ni remise à la valeur du fichier : le "
+         "compte rendu signale l'écart. Une "
          "recharge saisie à la main puis retrouvée dans le fichier (heures "
          "qui se recouvrent, même énergie à 0,1\xa0kWh ou 1\xa0% près) est "
          "remplacée par la ligne de la borne, plus précise. En cas de "
@@ -315,7 +319,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "vérifiez qu'il s'agit bien de la même recharge. Les "
          "branchements sans recharge sont écartés. Une session dont "
          "l'énergie dépasse ce que la batterie peut absorber en une charge "
-         "(d'après la capacité indiquée dans les Paramètres) est mise de "
+         "(d'après la capacité indiquée dans les Paramètres ; sans "
+         f"capacité indiquée, au-delà de {ENERGIE_MAX_SANS_CAPACITE:.0f}"
+         "\xa0kWh) est mise de "
          "côté : le compte rendu la liste en orange ; si elle est réelle, "
          "saisissez-la à la main. Si des lignes ne sont pas "
          "comprises, leur nombre s'affiche en orange — elles n'ont PAS été "
@@ -439,7 +445,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Réglages de la voiture et de la borne",
          "Dans la page « ⚙️ Paramètres » (menu de gauche, section "
          "Réglages). La capacité de la batterie, en kWh : "
-         "elle sert à repérer une énergie impossible à la saisie, et de "
+         "elle sert à repérer une énergie impossible à la saisie et à "
+         "l'import (sans elle, seule une énergie de plus de "
+         f"{ENERGIE_MAX_SANS_CAPACITE:.0f}\xa0kWh est repérée), et de "
          "marge au contrôle kilométrique. Le rendement de charge, en pour "
          "cent : la part de l'énergie qui arrive vraiment à la batterie, 90 "
          "convient à la plupart des voitures. La correction de l'horloge, en "
