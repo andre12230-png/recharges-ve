@@ -15,6 +15,7 @@ import hashlib
 import shutil
 import sys
 import tempfile
+import threading
 import traceback
 from datetime import date
 from pathlib import Path
@@ -45,6 +46,47 @@ from recharges import (assurer_ids, charger_donnees, dossier_donnees,
 from formats import fmt_eur, fmt_nb_recharges
 from theme_qt import (CREME, LARGEUR_BANDEAU, appliquer_theme,
                       installer_traduction_qt, theme_actif)
+
+
+# ---------- prechargement du graphique des Statistiques ----------
+
+# Delai entre l'ouverture de la fenetre et le debut du prechargement : le
+# tableau de bord est bati d'abord, puis matplotlib se charge pendant que
+# l'utilisateur lit (14-11-2026).
+DELAI_PRECHARGEMENT_MS = 1000
+
+# Vrai des que le fil est lance : un seul par programme, meme si plusieurs
+# fenetres s'ouvrent (les tests en ouvrent des dizaines).
+_prechargement_lance = False
+
+
+def _importer_graphique() -> None:
+    """Importe graphique.py (et donc matplotlib). Rien n'est dessine ici :
+    seul le chargement des modules est fait d'avance."""
+    try:
+        import graphique  # noqa: F401
+    except Exception as e:
+        # Pas grave : le graphique sera charge au clic, comme avant.
+        recharges.signaler(f"[prechargement] {e}")
+
+
+def precharger_graphique() -> threading.Thread | None:
+    """Charge matplotlib en arriere-plan, pour que la premiere ouverture des
+    Statistiques soit rapide (environ 2 secondes gagnees dans l'exe).
+
+    Le chargement se fait dans un fil a part : la fenetre reste utilisable
+    pendant ce temps. Si l'utilisateur clique sur Statistiques avant la fin,
+    Python attend simplement que le chargement en cours se termine.
+    Renvoie le fil lance, ou None s'il l'a deja ete."""
+    global _prechargement_lance
+    if _prechargement_lance:
+        return None
+    _prechargement_lance = True
+    # daemon : le fil ne retient jamais le programme a la fermeture.
+    fil = threading.Thread(target=_importer_graphique,
+                           name="prechargement-graphique", daemon=True)
+    fil.start()
+    return fil
 
 
 class FenetrePrincipale(QMainWindow):
@@ -129,6 +171,11 @@ class FenetrePrincipale(QMainWindow):
         # est annulee au lieu de s'executer sur une fenetre detruite (ce qui
         # faisait planter Python dans les tests, 25/09/2026).
         QTimer.singleShot(0, self, lambda: self.afficher_vue("dashboard"))
+        # Puis matplotlib se charge en arriere-plan : les Statistiques
+        # s'ouvriront sans attendre (14-11-2026). Appel par le nom du
+        # module, pour que les tests puissent le remplacer.
+        QTimer.singleShot(DELAI_PRECHARGEMENT_MS, self,
+                          lambda: precharger_graphique())
         # Une fois la fenetre affichee : accueillir au premier demarrage, ou
         # prevenir si le fichier de donnees a du etre repare.
         if accueil:
