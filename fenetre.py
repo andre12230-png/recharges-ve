@@ -304,9 +304,26 @@ class FenetrePrincipale(QMainWindow):
         colonne.addStretch(1)
         # La version en pied : utile pour une capture d'ecran ou un rapport
         # de bug, mais on ne la lit pas tous les jours.
+        # Sur la meme ligne, a droite : un petit bouton « Quitter » (14/11/2026,
+        # comme Pecule). Petit et sur cette ligne pour ne pas allonger le
+        # bandeau sur un portable 1366 x 768. Il passe par close() : memes
+        # protections que la croix (saisie non enregistree, copie des donnees).
+        pied = QWidget()
+        ligne_pied = QHBoxLayout(pied)
+        ligne_pied.setContentsMargins(0, 0, 0, 0)
+        ligne_pied.setSpacing(4)
         version = QLabel(APP_VERSION)
         version.setObjectName("Version")
-        colonne.addWidget(version)
+        ligne_pied.addWidget(version)
+        ligne_pied.addStretch(1)
+        quitter = QPushButton("🚪 Quitter")
+        quitter.setObjectName("BoutonQuitter")
+        quitter.setStyleSheet("QPushButton { font-size: 8pt; padding: 1px 6px; }")
+        quitter.setCursor(Qt.PointingHandCursor)
+        quitter.setToolTip(f"Fermer {APP_NAME} (Ctrl+Q)")
+        quitter.clicked.connect(lambda: self.close())
+        ligne_pied.addWidget(quitter)
+        colonne.addWidget(pied)
 
         defilement = QScrollArea()
         defilement.setWidget(bandeau)
@@ -614,7 +631,9 @@ class FenetrePrincipale(QMainWindow):
                 # Les touches de fonction evitent d'entrer en conflit avec
                 # la saisie.
                 ("F5", lambda: self.afficher_vue(self.vue_courante
-                                                 or "dashboard"))):
+                                                 or "dashboard")),
+                # Ctrl+Q : comme le bouton « Quitter » du bandeau (14/11/2026).
+                ("Ctrl+Q", lambda: self.close())):
             raccourci = QShortcut(QKeySequence(touches), self)
             raccourci.activated.connect(action)
 

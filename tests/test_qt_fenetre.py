@@ -387,3 +387,37 @@ def test_fenetres_d_aide(qapp):
     avis = FenetreAvis()
     assert avis.btn_ouvrir.isEnabled()
     assert any(t.startswith("Votre version : ") for t in textes(avis))
+
+
+# ---------- le bouton « Quitter » (14/11/2026) ----------
+
+def _bouton_quitter(fenetre):
+    boutons = [b for b in fenetre.findChildren(QPushButton)
+               if "Quitter" in b.text()]
+    assert len(boutons) == 1
+    return boutons[0]
+
+
+def test_bouton_quitter_sur_la_ligne_de_la_version(fenetre):
+    """Comme Pecule : petit, a droite du numero de version, en bas du
+    bandeau. Sur cette ligne, il n'allonge pas le bandeau (portable
+    1366 x 768)."""
+    bouton = _bouton_quitter(fenetre)
+    version = bouton.parentWidget().findChild(QLabel, "Version")
+    assert version is not None and version.text() == APP_VERSION
+    assert version.parentWidget() is bouton.parentWidget()
+    assert "Ctrl+Q" in bouton.toolTip()
+
+
+def test_bouton_quitter_et_ctrl_q_ferment_comme_la_croix(fenetre, monkeypatch):
+    """Les deux passent par close() : memes protections que la croix
+    (saisie non enregistree, copie des donnees a la fermeture)."""
+    from PySide6.QtGui import QKeySequence, QShortcut
+    appels = []
+    monkeypatch.setattr(fenetre, "close", lambda: appels.append(1) or True)
+    _bouton_quitter(fenetre).click()
+    raccourcis = [r for r in fenetre.findChildren(QShortcut)
+                  if r.key() == QKeySequence("Ctrl+Q")]
+    assert len(raccourcis) == 1
+    raccourcis[0].activated.emit()
+    assert appels == [1, 1]

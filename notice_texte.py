@@ -504,6 +504,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
                    "des valeurs tapées à enregistrer. Pour enregistrer, "
                    "utilisez le bouton de la page ou la touche Entrée."),
         ("Ctrl+F", "Ouvrir l'Historique et aller dans la recherche."),
+        ("Ctrl+Q", "Fermer l'application, comme le petit bouton "
+                   "« 🚪 Quitter » en bas du menu, à côté du numéro de "
+                   "version, ou la croix de la fenêtre."),
         ("F5", "Recharger la page affichée (sauf si vous y avez tapé des "
                "valeurs pas encore enregistrées : elles restent)."),
         ("Entrée", "Enregistrer le formulaire en cours, depuis n'importe "
