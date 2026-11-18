@@ -8,13 +8,14 @@ ne se connecte elle-meme a aucun serveur (tests/test_aide_en_ligne.py).
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QGuiApplication
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout)
 
-from constantes import APP_NAME, APP_VERSION
-from liens import (FORMULAIRE_AVIS_URL, INSTALLEUR_URL, PAGE_VERSIONS_URL,
-                   description_systeme)
+from constantes import (APP_NAME, APP_VERSION, COPYRIGHT_TITULAIRE,
+                        chemin_ressource)
+from liens import (DEPOT_URL, FORMULAIRE_AVIS_URL, INSTALLEUR_URL,
+                   PAGE_VERSIONS_URL, description_systeme)
 from theme_qt import ROUGE
 
 
@@ -107,6 +108,45 @@ class FenetreMiseAJour(_FenetreNavigateur):
             "✓ Téléchargement lancé dans votre navigateur. Fermez "
             "l'application avant de lancer l'installeur."))
         self._finir([nouveautes, installeur])
+
+
+class FenetreAPropos(_FenetreNavigateur):
+    """Fenetre « À propos » : version, licence, auteur, depot.
+
+    Meme fenetre que dans Pecule et le Photovoltaique. Ouverte par un clic sur
+    le numero de version, en bas du bandeau de gauche. Rien n'est envoye
+    nulle part : la page du projet ne s'ouvre que si l'on clique le bouton."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent, f"À propos de {APP_NAME}")
+        self.setMinimumWidth(440)
+        # Logo : l'icone de l'application, si le fichier est la.
+        icone = chemin_ressource("icone_voiture.ico")
+        if icone.is_file():
+            logo = QLabel()
+            logo.setPixmap(QIcon(str(icone)).pixmap(64, 64))
+            logo.setAlignment(Qt.AlignCenter)
+            self.disposition.addWidget(logo)
+        titre = _texte(APP_NAME, gras=True)
+        titre.setStyleSheet("font-weight: bold; font-size: 16pt;")
+        for etiquette, texte in (
+                (titre, None),
+                (_texte(f"Version {APP_VERSION}"), None),
+                (_texte("Recharges VE suit le coût réel des recharges de "
+                        "votre véhicule électrique, sur votre ordinateur. "
+                        "Il est écrit en Python et bâti avec PySide6 (Qt). "
+                        "Il ne se connecte à aucun serveur : vos données "
+                        "restent chez vous."), None),
+                (_texte(f"Copyright © {COPYRIGHT_TITULAIRE}", gras=True), None),
+                (_texte("Ce logiciel est fourni sans aucune garantie, dans "
+                        "la mesure permise par la loi."), None),
+                (_texte("Logiciel libre, sous licence MIT."), None)):
+            etiquette.setAlignment(Qt.AlignCenter)
+            self.disposition.addWidget(etiquette)
+        self.btn_depot = QPushButton("🌐 Page du projet sur GitHub")
+        self.btn_depot.clicked.connect(lambda: self._ouvrir(
+            DEPOT_URL, "✓ Page du projet ouverte dans votre navigateur."))
+        self._finir([self.btn_depot])
 
 
 class FenetreAvis(_FenetreNavigateur):

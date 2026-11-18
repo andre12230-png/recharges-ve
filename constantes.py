@@ -10,7 +10,11 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Recharges VE"
-APP_VERSION = "v2.2.38"
+APP_VERSION = "v2.2.39"
+# Fenetre « À propos » (18/11/2026) : le titulaire du copyright est le meme que
+# dans le fichier LICENSE (un test les compare) : le pseudo public de
+# l'auteur, jamais son nom civil.
+COPYRIGHT_TITULAIRE = "2026 andre12230-png"
 
 # Saisie depuis le telephone : reservee a la version privee (decision du
 # 24/10/2026). L'exe public est construit sans telephone.py (option

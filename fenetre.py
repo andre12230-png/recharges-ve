@@ -314,6 +314,11 @@ class FenetrePrincipale(QMainWindow):
         ligne_pied.setSpacing(4)
         version = QLabel(APP_VERSION)
         version.setObjectName("Version")
+        # Lien discret vers « À propos » (18/11/2026, comme Pecule) : le
+        # texte ne change pas, donc le bandeau ne grandit pas.
+        version.setCursor(Qt.PointingHandCursor)
+        version.setToolTip(f"À propos de {APP_NAME}")
+        version.mousePressEvent = lambda _e: self._ouvrir_a_propos()
         ligne_pied.addWidget(version)
         ligne_pied.addStretch(1)
         quitter = QPushButton("🚪 Quitter")
@@ -883,6 +888,10 @@ class FenetrePrincipale(QMainWindow):
         FenetreTelephone(self, dossier_donnees()).exec()
 
     # ---------- aide ----------
+
+    def _ouvrir_a_propos(self) -> None:
+        from fenetres_aide import FenetreAPropos
+        FenetreAPropos(self).exec()
 
     def _ouvrir_mise_a_jour(self) -> None:
         from fenetres_aide import FenetreMiseAJour

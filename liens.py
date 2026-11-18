@@ -22,6 +22,8 @@ AIDE_EN_LIGNE = True
 # numerote, pour que le lien ne change jamais (comme le Photovoltaique).
 PAGE_VERSIONS_URL = "https://github.com/andre12230-png/recharges-ve/releases/latest"
 INSTALLEUR_URL = PAGE_VERSIONS_URL + "/download/Recharges-VE-Setup.exe"
+# Page du projet (fenetre « À propos »).
+DEPOT_URL = "https://github.com/andre12230-png/recharges-ve"
 
 # Questionnaire en ligne (Microsoft Forms « Recharges VE — votre avis »,
 # cree le 15/09/2026 dans le compte de l'auteur, comme ceux de Pecule et du
