@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Recharges VE"
-APP_VERSION = "v2.2.41"
+APP_VERSION = "v2.2.42"
 # Fenetre « À propos » (18/11/2026) : le titulaire du copyright est le meme que
 # dans le fichier LICENSE (un test les compare) : le pseudo public de
 # l'auteur, jamais son nom civil.

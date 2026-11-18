@@ -148,3 +148,21 @@ def test_la_fenetre_auteur_montre_le_portrait(qapp):
     fenetre = FenetreAProposAuteur()
     assert fenetre.portrait is not None
     assert not fenetre.portrait.pixmap().isNull()
+
+
+# --- La notice décrit « À propos » au bon endroit (18/11/2026) ----------
+
+def test_la_notice_decrit_a_propos_dans_nouvelles_versions_et_avis():
+    """« À propos » est décrit à côté de « Mise à jour » et « Votre avis »,
+    pas dans l'entrée des raccourcis clavier ; et le texte dit que la page du
+    projet s'ouvre par un bouton (la fenêtre n'écrit plus le lien)."""
+    from notice_texte import SECTIONS
+
+    sections = dict(SECTIONS)
+    entrees = dict(sections["Nouvelles versions et avis"])
+    assert "À propos" in entrees
+    texte = entrees["À propos"]
+    assert "Page du projet sur GitHub" in texte
+    assert "département" in texte and "portrait" in texte
+    ctrl_q = dict(sections["Raccourcis clavier"])["Ctrl+Q"]
+    assert "propos" not in ctrl_q

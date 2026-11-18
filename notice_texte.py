@@ -498,6 +498,12 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "Le bouton « 💬 Votre avis » ouvre un court questionnaire dans "
          "votre navigateur, pour signaler un problème ou proposer une idée. "
          "Aucune réponse n'est obligatoire."),
+        ("À propos",
+         "Le petit bouton « À propos », en bas du menu à côté de "
+         "« 🚪 Quitter », ouvre une fenêtre avec la version et la licence. "
+         "Son bouton « 🌐 Page du projet sur GitHub » ouvre la page du "
+         "projet dans votre navigateur ; « À propos de l'auteur » montre le "
+         "pseudo, le département et le portrait."),
     ]),
     ("Raccourcis clavier", [
         ("Ctrl+S", "Ne sauvegarde rien : il rappelle seulement s'il reste "
@@ -506,10 +512,7 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Ctrl+F", "Ouvrir l'Historique et aller dans la recherche."),
         ("Ctrl+Q", "Fermer l'application, comme le petit bouton "
                    "« 🚪 Quitter » en bas du menu, à côté du numéro de "
-                   "version, ou la croix de la fenêtre. Le bouton "
-                   "« À propos », juste à côté, ouvre la licence et le "
-                   "dépôt ; son bouton « À propos de l'auteur » montre le "
-                   "pseudo, le département et le portrait."),
+                   "version, ou la croix de la fenêtre."),
         ("F5", "Recharger la page affichée (sauf si vous y avez tapé des "
                "valeurs pas encore enregistrées : elles restent)."),
         ("Entrée", "Enregistrer le formulaire en cours, depuis n'importe "
