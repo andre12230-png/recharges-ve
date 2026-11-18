@@ -319,9 +319,9 @@ class FenetrePrincipale(QMainWindow):
         ligne_pied.addStretch(1)
         # Un vrai bouton « À propos » (18/11/2026, comme Pecule), petit et
         # dans le pied : le bandeau ne grandit pas.
-        a_propos = QPushButton("ℹ️ À propos")
+        a_propos = QPushButton("À propos")
         a_propos.setObjectName("BoutonAPropos")
-        a_propos.setStyleSheet("QPushButton { font-size: 8pt; padding: 1px 6px; }")
+        a_propos.setStyleSheet("QPushButton { font-size: 8pt; padding: 1px 4px; }")
         a_propos.setCursor(Qt.PointingHandCursor)
         a_propos.setToolTip("Version, licence, auteur et page du projet")
         a_propos.clicked.connect(lambda: self._ouvrir_a_propos())

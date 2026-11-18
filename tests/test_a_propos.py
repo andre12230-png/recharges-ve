@@ -128,7 +128,7 @@ def test_fenetre_auteur_donne_pseudo_departement_et_garantie(qapp):
 
     texte = _texte(FenetreAProposAuteur())
     assert AUTEUR_PSEUDO in texte
-    assert "Ardèche" in texte          # le departement, pas la commune
+    assert "07 Ardèche" in texte       # numero et departement, pas la commune
     assert COPYRIGHT_TITULAIRE in texte
     assert "aucune garantie" in texte
 

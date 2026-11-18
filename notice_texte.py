@@ -507,7 +507,7 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Ctrl+Q", "Fermer l'application, comme le petit bouton "
                    "« 🚪 Quitter » en bas du menu, à côté du numéro de "
                    "version, ou la croix de la fenêtre. Le bouton "
-                   "« ℹ️ À propos », juste à côté, ouvre la licence et le "
+                   "« À propos », juste à côté, ouvre la licence et le "
                    "dépôt ; son bouton « À propos de l'auteur » montre le "
                    "pseudo, le département et le portrait."),
         ("F5", "Recharger la page affichée (sauf si vous y avez tapé des "
