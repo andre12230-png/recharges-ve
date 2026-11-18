@@ -11,8 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QEvent, QPoint, Qt
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import QLabel, QToolTip
 
 import fenetre as module_fenetre
@@ -70,23 +69,27 @@ def test_le_bouton_du_depot_ouvre_la_page_du_projet(qapp, monkeypatch):
     assert ouvertes == [liens.DEPOT_URL]
 
 
-def test_clic_sur_la_version_ouvre_a_propos(fenetre, monkeypatch):
+def test_le_bouton_a_propos_du_bandeau_ouvre_la_fenetre(fenetre, monkeypatch):
+    """Un vrai bouton en pied de bandeau (plus lisible qu'un clic sur le
+    numéro de version, qui reste un simple texte)."""
+    from PySide6.QtWidgets import QPushButton
+
     ouvertures = []
     monkeypatch.setattr(FenetreAPropos, "exec",
                         lambda self: ouvertures.append(self) or 0)
-    etiquette = _etiquette_version(fenetre)
-    assert etiquette.text() == APP_VERSION
-    clic = QMouseEvent(QEvent.MouseButtonPress, QPoint(2, 2),
-                       Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-    etiquette.mousePressEvent(clic)
+    boutons = [b for b in fenetre.findChildren(QPushButton)
+               if b.objectName() == "BoutonAPropos"]
+    assert len(boutons) == 1
+    assert "propos" in boutons[0].text()
+    boutons[0].click()
     assert len(ouvertures) == 1
     assert f"{APP_NAME}" in ouvertures[0].windowTitle()
 
 
-def test_la_version_annonce_son_role(fenetre):
+def test_la_version_reste_affichee_sans_etre_un_lien(fenetre):
     etiquette = _etiquette_version(fenetre)
-    assert "propos" in etiquette.toolTip()
-    assert etiquette.cursor().shape() == Qt.PointingHandCursor
+    assert etiquette.text() == APP_VERSION
+    assert etiquette.cursor().shape() != Qt.PointingHandCursor
 
 
 def test_l_infobulle_du_numero_reste_lisible(qapp, fenetre):

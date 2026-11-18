@@ -314,13 +314,18 @@ class FenetrePrincipale(QMainWindow):
         ligne_pied.setSpacing(4)
         version = QLabel(APP_VERSION)
         version.setObjectName("Version")
-        # Lien discret vers « À propos » (18/11/2026, comme Pecule) : le
-        # texte ne change pas, donc le bandeau ne grandit pas.
-        version.setCursor(Qt.PointingHandCursor)
-        version.setToolTip(f"À propos de {APP_NAME}")
-        version.mousePressEvent = lambda _e: self._ouvrir_a_propos()
+        version.setToolTip("Version installée")
         ligne_pied.addWidget(version)
         ligne_pied.addStretch(1)
+        # Un vrai bouton « À propos » (18/11/2026, comme Pecule), petit et
+        # dans le pied : le bandeau ne grandit pas.
+        a_propos = QPushButton("ℹ️ À propos")
+        a_propos.setObjectName("BoutonAPropos")
+        a_propos.setStyleSheet("QPushButton { font-size: 8pt; padding: 1px 6px; }")
+        a_propos.setCursor(Qt.PointingHandCursor)
+        a_propos.setToolTip("Version, licence, auteur et page du projet")
+        a_propos.clicked.connect(lambda: self._ouvrir_a_propos())
+        ligne_pied.addWidget(a_propos)
         quitter = QPushButton("🚪 Quitter")
         quitter.setObjectName("BoutonQuitter")
         quitter.setStyleSheet("QPushButton { font-size: 8pt; padding: 1px 6px; }")
