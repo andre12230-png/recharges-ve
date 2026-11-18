@@ -44,6 +44,7 @@ py -m PyInstaller --noconfirm --onedir --windowed ^
   --add-data "icone_voiture.ico;." ^
   --add-data "fleche_bas.svg;." ^
   --add-data "fleche_bas_sombre.svg;." ^
+  --add-data "auteur.png;." ^
   --collect-all reportlab ^
   --collect-submodules openpyxl ^
   --exclude-module tkinter ^

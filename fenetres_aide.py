@@ -8,12 +8,12 @@ ne se connecte elle-meme a aucun serveur (tests/test_aide_en_ligne.py).
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPixmap
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout)
 
-from constantes import (APP_NAME, APP_VERSION, COPYRIGHT_TITULAIRE,
-                        chemin_ressource)
+from constantes import (APP_NAME, APP_VERSION, AUTEUR_LIEU, AUTEUR_PSEUDO,
+                        COPYRIGHT_TITULAIRE, chemin_ressource)
 from liens import (DEPOT_URL, FORMULAIRE_AVIS_URL, INSTALLEUR_URL,
                    PAGE_VERSIONS_URL, description_systeme)
 from theme_qt import ROUGE
@@ -146,7 +146,39 @@ class FenetreAPropos(_FenetreNavigateur):
         self.btn_depot = QPushButton("🌐 Page du projet sur GitHub")
         self.btn_depot.clicked.connect(lambda: self._ouvrir(
             DEPOT_URL, "✓ Page du projet ouverte dans votre navigateur."))
-        self._finir([self.btn_depot])
+        # Second ecran : qui a ecrit le logiciel.
+        self.btn_auteur = QPushButton("À propos de l'auteur")
+        self.btn_auteur.clicked.connect(
+            lambda: FenetreAProposAuteur(self).exec())
+        self._finir([self.btn_auteur, self.btn_depot])
+
+
+class FenetreAProposAuteur(_FenetreNavigateur):
+    """« À propos de l'auteur » : pseudo public, departement, copyright."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent, "À propos de l'auteur")
+        self.setMinimumWidth(440)
+        # Portrait de l'auteur (auteur.png, livre a cote de l'icone) ; sans
+        # le fichier, la fenetre s'affiche quand meme, sans image.
+        self.portrait = None
+        image = chemin_ressource("auteur.png")
+        if image.is_file():
+            self.portrait = QLabel()
+            self.portrait.setPixmap(QPixmap(str(image)))
+            self.portrait.setAlignment(Qt.AlignCenter)
+            self.disposition.addWidget(self.portrait)
+        titre = _texte(f"Auteur : {AUTEUR_PSEUDO}", gras=True)
+        titre.setStyleSheet("font-weight: bold; font-size: 16pt;")
+        for etiquette in (
+                titre,
+                _texte(AUTEUR_LIEU),
+                _texte(f"Copyright © {COPYRIGHT_TITULAIRE}", gras=True),
+                _texte("Ce logiciel est fourni sans aucune garantie, dans "
+                       "la mesure permise par la loi.")):
+            etiquette.setAlignment(Qt.AlignCenter)
+            self.disposition.addWidget(etiquette)
+        self._finir([])
 
 
 class FenetreAvis(_FenetreNavigateur):

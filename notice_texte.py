@@ -507,7 +507,9 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         ("Ctrl+Q", "Fermer l'application, comme le petit bouton "
                    "« 🚪 Quitter » en bas du menu, à côté du numéro de "
                    "version, ou la croix de la fenêtre. Un clic sur ce numéro de "
-                   "version ouvre « À propos » (auteur, licence, dépôt)."),
+                   "version ouvre « À propos » (licence, dépôt) ; son bouton "
+                   "« À propos de l'auteur » montre le pseudo, le département "
+                   "et le portrait."),
         ("F5", "Recharger la page affichée (sauf si vous y avez tapé des "
                "valeurs pas encore enregistrées : elles restent)."),
         ("Entrée", "Enregistrer le formulaire en cours, depuis n'importe "

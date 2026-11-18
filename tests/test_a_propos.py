@@ -115,3 +115,33 @@ def test_l_infobulle_du_numero_reste_lisible(qapp, fenetre):
     assert fond == "#ffffdc", fond
     plus_fonce = min(max(c.red(), c.green(), c.blue()) for c in pixels)
     assert plus_fonce <= 60, plus_fonce
+
+
+# --- Fenetre « À propos de l'auteur » (18/11/2026) ---------------------
+
+def test_fenetre_auteur_donne_pseudo_departement_et_garantie(qapp):
+    from constantes import AUTEUR_PSEUDO
+    from fenetres_aide import FenetreAProposAuteur
+
+    texte = _texte(FenetreAProposAuteur())
+    assert AUTEUR_PSEUDO in texte
+    assert "Ardèche" in texte          # le departement, pas la commune
+    assert COPYRIGHT_TITULAIRE in texte
+    assert "aucune garantie" in texte
+
+
+def test_le_bouton_auteur_ouvre_la_fenetre_auteur(qapp, monkeypatch):
+    import fenetres_aide
+    ouvertures = []
+    monkeypatch.setattr(fenetres_aide.FenetreAProposAuteur, "exec",
+                        lambda self: ouvertures.append(self) or 0)
+    FenetreAPropos().btn_auteur.click()
+    assert len(ouvertures) == 1
+
+
+def test_la_fenetre_auteur_montre_le_portrait(qapp):
+    from fenetres_aide import FenetreAProposAuteur
+
+    fenetre = FenetreAProposAuteur()
+    assert fenetre.portrait is not None
+    assert not fenetre.portrait.pixmap().isNull()
