@@ -206,7 +206,7 @@ def test_excel_traite_les_champs_textuels_comme_du_texte(tmp_path):
         assert cellule.data_type == "s"
 
 
-# ---------- « € » et non « EUR » (choix d'André du 04/11/2026) ----------
+# ---------- « € » et non « EUR » (choix de l'auteur du 04/11/2026) ----------
 # Tous les écrans écrivent « € » ; les exports écrivaient « EUR » sans
 # raison écrite. La police du PDF (Helvetica) sait dessiner le « € ».
 

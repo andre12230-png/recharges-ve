@@ -221,7 +221,7 @@ def preparer_quinze_sauvegardes(dossier: Path) -> None:
 
 def test_la_plus_vieille_sauvegarde_part_a_la_corbeille(dossier,
                                                         monkeypatch):
-    """Décision d'André du 26/10/2026 : jamais de suppression définitive
+    """Décision de l'auteur du 26/10/2026 : jamais de suppression définitive
     quand la Corbeille est disponible."""
     corbeille = dossier / "corbeille_simulee"
     corbeille.mkdir()

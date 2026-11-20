@@ -3,7 +3,7 @@
 Après un changement de grille, la question « Recalculer les coûts ? »
 propose « Plus tard ». Rien ne rappelait ensuite que les coûts déjà
 enregistrés ne suivaient plus la grille. Le moteur retient maintenant
-« recalcul_en_attente » dans tarifs.json (clé facultative, accord d'André :
+« recalcul_en_attente » dans tarifs.json (clé facultative, accord de l'auteur :
 un ancien fichier sans elle n'a rien à rappeler), et tout recalcul l'efface.
 La page Tarifs et le tableau de bord affichent alors un bandeau, avec le
 bouton qui recalcule.

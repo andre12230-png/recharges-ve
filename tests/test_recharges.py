@@ -1007,7 +1007,7 @@ class TestFichiers(unittest.TestCase):
         self.assertEqual(res["ajoutes"], 1)
         self.assertEqual(res["parasites"], 1)
 
-    # --- energie impossible a l'import (decision d'Andre du 03/11/2026) ----
+    # --- energie impossible a l'import (decision de l'auteur du 03/11/2026) ----
 
     LIGNE_20_KWH = ("TACW000000S0000,2026-03-05 23:00:00,2026-03-06 05:00:00,"
                     "20.000kWh,06h00min,2.60€")

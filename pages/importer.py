@@ -91,7 +91,7 @@ def texte_resultat(res: dict) -> tuple[str, bool]:
                   "enregistrées.")
     # Les sessions au-delà de ce que la batterie peut absorber (des Wh lus
     # comme des kWh, par exemple) : mises de côté par le moteur, listées
-    # ici une par ligne, en orange (décision d'André du 03/11/2026).
+    # ici une par ligne, en orange (décision de l'auteur du 03/11/2026).
     trop = res.get("trop_kwh") or []
     if trop:
         alerte = True

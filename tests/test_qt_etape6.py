@@ -314,7 +314,7 @@ def test_compte_rendu_d_import():
 def test_compte_rendu_liste_les_sessions_mises_de_cote():
     """Une session au-dela de ce que la batterie peut absorber n'est pas
     enregistree : le compte rendu la liste, en orange, et dit quoi faire
-    (decision d'Andre du 03/11/2026)."""
+    (decision de l'auteur du 03/11/2026)."""
     res = {"ajoutes": 1, "remplaces": 0, "doublons": 0, "zero_kwh": 0,
            "parasites": 0, "total_lus": 2,
            "trop_kwh": [{"date": "2026-03-07T23:00", "kwh": 12500.0}]}

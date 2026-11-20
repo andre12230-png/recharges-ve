@@ -381,7 +381,7 @@ def _lire_donnees_du_disque() -> dict:
 
 def _retirer_sauvegarde(vieux: Path) -> None:
     """Sort une sauvegarde de la rotation de backups/ : a la Corbeille de
-    Windows, d'ou elle peut etre recuperee (decision d'Andre du 26/10/2026,
+    Windows, d'ou elle peut etre recuperee (decision de l'auteur du 26/10/2026,
     constat #12 des audits). Sans Corbeille (donnees sur une cle USB ou un
     disque reseau, autre systeme que Windows), elle est supprimee comme
     avant : sinon backups/ grossirait sans fin."""
@@ -1576,7 +1576,7 @@ def supprimer_tarif(id_tarif: str) -> bool:
 # Après un changement de grille, « Plus tard » laissait les coûts déjà
 # enregistrés sur l'ancienne grille, sans plus rien rappeler. Cette clé de
 # tarifs.json le retient jusqu'au prochain recalcul. Facultative (accord
-# d'André) : un fichier sans elle n'a rien à rappeler.
+# de l'auteur) : un fichier sans elle n'a rien à rappeler.
 CLE_RECALCUL_EN_ATTENTE = "recalcul_en_attente"
 
 
@@ -2029,7 +2029,7 @@ def energie_maximale_par_charge(config: dict | None = None) -> float | None:
     (capacite / rendement), ou None si la capacite n'est pas renseignee.
 
     Une seule regle pour la question « Energie inhabituelle » de la saisie
-    et pour l'import, qui met de cote une session au-dela (decision d'Andre
+    et pour l'import, qui met de cote une session au-dela (decision de l'auteur
     du 03/11/2026)."""
     if config is None:
         config = charger_config()
@@ -3762,7 +3762,7 @@ def _importer_csv(chemin: str | Path, ignorer_zero: bool,
     hors_grille: list[datetime] = []   # débuts qu'aucun tarif ne couvre
     # Sessions au-delà de ce que la batterie peut absorber en une charge
     # (des Wh lus comme des kWh, par exemple) : mises de côté, PAS
-    # enregistrées, et listées dans le compte rendu (décision d'André du
+    # enregistrées, et listées dans le compte rendu (décision de l'auteur du
     # 03/11/2026). Avant, elles entraient dans les données sans un mot.
     # Capacité non renseignée : le plafond fixe prend le relais (audit du
     # 11/11/2026, V1 ; avant, rien n'était mis de côté dans ce cas).
