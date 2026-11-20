@@ -212,8 +212,8 @@ def _carte_essence(page) -> QWidget:
     for rang, (cle, libelle, valeur, aide) in enumerate((
             ("conso", "Consommation (L/100\xa0km)", config["conso_essence"],
              "Celle d'une voiture essence de même taille que la vôtre."),
-            ("prix", "Prix du litre (€)", config["prix_essence"],
-             "Le prix affiché à la pompe."))):
+            ("prix", "Prix moyen du litre (€)", config["prix_essence"],
+             "Le prix moyen à la pompe, pour le carburant de votre choix."))):
         etiquette = QLabel(libelle)
         etiquette.setObjectName("LibelleChamp")
         grille.addWidget(etiquette, rang, 0)
@@ -228,8 +228,8 @@ def _carte_essence(page) -> QWidget:
     # coutait pas le meme prix d'une annee a l'autre. Une case par annee,
     # de la premiere recharge a l'annee en cours.
     corps.addWidget(paragraphe(
-        "Prix du litre par année (facultatif) : une année laissée vide prend "
-        "le prix ci-dessus.", "Discret"))
+        "Prix moyen du litre par année (facultatif) : une année laissée vide "
+        "prend le prix ci-dessus.", "Discret"))
     # L'annee la plus recente en premier (10/10/2026).
     annees = sorted({x.get("date", "")[:4]
                      for x in charger_donnees()["recharges"]

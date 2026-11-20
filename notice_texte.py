@@ -375,7 +375,7 @@ SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
          "Son origine et son prix ne sont pas connus : le coût en électricité "
          "ne compte que vos recharges saisies."),
         ("Le prix du litre",
-         "Un prix général, et, si vous le souhaitez, un prix par année "
+         "Un prix moyen général, et, si vous le souhaitez, un prix moyen par année "
          "(Paramètres) : l'essence ne coûtait pas le même prix d'une année à "
          "l'autre. Une année laissée vide prend le prix général. Pensez à le "
          "mettre à jour de temps en temps : le tableau de bord vous le "
