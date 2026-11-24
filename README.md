@@ -29,11 +29,11 @@ Pas besoin d'être informaticien, ni d'installer Python :
 4. Lancez **Recharges VE** depuis le menu Démarrer.
 
 Vous préférez vérifier plutôt que me croire sur parole ? L'installeur de cette
-version a été soumis à 68 antivirus, et
-**[un seul le signale](https://www.virustotal.com/gui/file/f62524511fee4b705fceacf8b29cee2268292c01d7fddf87a018da749a02b427)** :
-celui de Microsoft, par une détection automatique (« !ml ») qui se trompe souvent
-sur les programmes écrits en Python. Ce faux positif a été signalé à Microsoft. Le
-rapport est public, sur VirusTotal.
+version a été soumis à 67 antivirus, et
+**[aucun ne le signale](https://www.virustotal.com/gui/file/7a4a3ec31e57c495d1a83198d1d51ef840e70dffd831970f68fda18279cf054e)**.
+Le rapport est public, sur VirusTotal. Une version précédente avait été signalée
+par erreur par Microsoft, dont la détection automatique (« !ml ») se trompe souvent
+sur les programmes écrits en Python ; ce faux positif lui a été signalé.
 
 Vous pouvez aussi **[y déposer vous-même](https://www.virustotal.com/gui/home/upload)**
 le fichier que vous venez de télécharger, pour vous assurer qu'il est bien arrivé
